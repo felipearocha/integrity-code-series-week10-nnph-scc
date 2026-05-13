@@ -1,0 +1,99 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "integrity-code-series-week-10"
+version = "1.0.0"
+description = "Full-physics NNpHSCC simulation for gas transmission pipelines"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Felipe Rocha" }
+]
+keywords = [
+    "NNpHSCC",
+    "pipeline-integrity",
+    "stress-corrosion-cracking",
+    "fracture-mechanics",
+    "API-571",
+    "API-579",
+    "API-581",
+    "BS-7910",
+    "risk-based-inspection",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "numpy>=2.0.0",
+    "scipy>=1.12.0",
+    "matplotlib>=3.8.0",
+    "scikit-learn>=1.4.0",
+    "Pillow>=10.0.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.5.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc"
+Repository = "https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc"
+Issues = "https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/issues"
+Changelog = "https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/blob/main/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "validation*", "visualization*"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+]
+
+[tool.coverage.run]
+source = ["src", "validation", "visualization"]
+omit = ["*/tests/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+extend-exclude = ["assets", "notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["E501", "E741"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E402"]
+"run_all.py" = ["E402"]

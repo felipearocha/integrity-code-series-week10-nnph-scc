@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Integrity Code Series — Week 10 — Governing Equations</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        tags: 'ams'
+      },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    :root {
+      --navy: #1b3a5c;
+      --steel: #4c80b0;
+      --red: #8c2318;
+      --teal: #2e7d7b;
+      --charcoal: #333333;
+      --gold: #8B6914;
+      --bg: #fbfbfb;
+      --card: #ffffff;
+      --border: #e2e6ec;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 32px 24px 96px 24px;
+      color: var(--charcoal);
+      background: var(--bg);
+      line-height: 1.55;
+    }
+    header {
+      border-bottom: 2px solid var(--navy);
+      padding-bottom: 18px;
+      margin-bottom: 26px;
+    }
+    h1 {
+      color: var(--navy);
+      font-size: 26px;
+      margin: 0 0 6px 0;
+    }
+    .subtitle { color: var(--steel); font-size: 14px; margin: 0; }
+    h2 {
+      color: var(--navy);
+      border-left: 4px solid var(--teal);
+      padding-left: 12px;
+      margin-top: 38px;
+      font-size: 19px;
+    }
+    h3 {
+      color: var(--charcoal);
+      margin-top: 26px;
+      margin-bottom: 6px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .eq-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px 20px;
+      margin: 12px 0 18px 0;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    }
+    .src {
+      font-size: 12px;
+      color: var(--gold);
+      font-style: italic;
+      margin: 6px 0 10px 0;
+    }
+    .code-ref {
+      font-family: "SF Mono", "Consolas", "Menlo", monospace;
+      font-size: 11.5px;
+      color: var(--steel);
+      background: #f1f4f7;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+    .params {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #555;
+    }
+    .params table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 6px;
+    }
+    .params th, .params td {
+      border-bottom: 1px solid var(--border);
+      padding: 5px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    .params th {
+      color: var(--navy);
+      font-weight: 600;
+      background: #f6f8fb;
+    }
+    .toc {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 20px;
+      margin-bottom: 30px;
+    }
+    .toc ol { margin: 4px 0 0 0; padding-left: 22px; }
+    .toc a { color: var(--navy); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; color: var(--red); }
+    .note {
+      background: #fff8e6;
+      border-left: 3px solid var(--gold);
+      padding: 10px 14px;
+      margin: 14px 0;
+      font-size: 13px;
+      color: #5b4a1d;
+    }
+    .disclaimer {
+      margin-top: 50px;
+      padding: 16px 20px;
+      background: #fef0ee;
+      border-left: 3px solid var(--red);
+      font-size: 13px;
+      color: #6b2418;
+    }
+    footer {
+      margin-top: 36px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: #888;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Integrity Code Series — Week 10</h1>
+  <p class="subtitle">NNpHSCC Full-Physics — Governing Equations Reference</p>
+  <p class="subtitle"><strong>Felipe Rocha</strong></p>
+</header>
+
+<div class="toc">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#pdes">Coupled PDEs</a></li>
+    <li><a href="#fracture">Fracture Mechanics (Newman–Raju + residual stress)</a></li>
+    <li><a href="#growth">NNpHSCC Crack Growth (Chen–Sutherby–Xing)</a></li>
+    <li><a href="#dormancy">Crack Dormancy &amp; Coalescence</a></li>
+    <li><a href="#chemistry">Crack-Tip Chemistry (Turnbull)</a></li>
+    <li><a href="#cp">Cathodic Protection &amp; H Entry</a></li>
+    <li><a href="#fad">FAD and MAOP (API 579 / B31.8 / B31.12)</a></li>
+    <li><a href="#nde">NDE (POD) &amp; Post-Inspection</a></li>
+    <li><a href="#uncertainty">Model Structural Uncertainty</a></li>
+    <li><a href="#bayes">Bayesian Posterior Update</a></li>
+    <li><a href="#rbi">Risk-Based Inspection Interval</a></li>
+    <li><a href="#h2">H₂ Blending K<sub>IH</sub> Degradation</a></li>
+  </ol>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="pdes">1. Coupled PDEs</h2>
+
+<h3>1.1 Laplace equation — soil potential distribution (CP)</h3>
+<div class="eq-card">
+$$
+\nabla\!\cdot\!\bigl(\sigma_{\text{soil}}\,\nabla\phi\bigr) \;=\; 0
+\quad\text{in soil}
+$$
+with boundary conditions
+$$
+\phi = E_{\text{anode}} \quad\text{at remote anode,}\qquad
+-\sigma_{\text{soil}}\,\frac{\partial\phi}{\partial n}\Big|_{r=r_{\text{pipe}}} = i_{\text{BV}}(\phi)
+\quad\text{(Butler–Volmer at coating holiday)}
+$$
+The Butler–Volmer current density at the steel/electrolyte interface is
+$$
+i_{\text{BV}}(\phi_s) \;=\; -\,i_0\!\left[
+  \exp\!\Bigl(\tfrac{\alpha_a F\,\eta}{R\,T}\Bigr)
+  - \exp\!\Bigl(-\tfrac{\alpha_c F\,\eta}{R\,T}\Bigr)
+\right],
+\qquad \eta = \phi_s - E_{\text{free}}
+$$
+<p class="src">SOURCE: Brichau &amp; Deconinck (1994) <em>Corrosion</em> 50(1):39–47.</p>
+<p>Code: <span class="code-ref">src/hydrogen_diffusion.py → C_H_surface_from_potential</span> uses the holiday potential as boundary condition for H entry.</p>
+<div class="params">
+  <table>
+    <tr><th>Symbol</th><th>Meaning</th><th>Code constant</th></tr>
+    <tr><td>$\sigma_{\text{soil}}$</td><td>Soil conductivity [S m⁻¹]</td><td><span class="code-ref">SOIL_RHO_OHM</span> (resistivity, $\sigma=1/\rho$)</td></tr>
+    <tr><td>$\phi_s$</td><td>Pipe-to-soil potential [V vs CSE]</td><td><span class="code-ref">E_CP_V, E_FREE_V</span></td></tr>
+    <tr><td>$i_0$</td><td>Exchange current density [A m⁻²]</td><td>—</td></tr>
+    <tr><td>$\alpha_a,\alpha_c$</td><td>Anodic / cathodic transfer coefficients</td><td>—</td></tr>
+  </table>
+</div>
+</div>
+
+<h3>1.2 Oriani–Fick — hydrogen diffusion in steel wall (with trapping)</h3>
+<div class="eq-card">
+$$
+\frac{\partial C_L}{\partial t} \;=\; D_{\text{eff}}(T,\sigma_h)\,\frac{\partial^{2} C_L}{\partial r^{2}}
++ \frac{D_{\text{eff}}\,V_H}{R\,T}\,\frac{\partial}{\partial r}\!\Bigl(C_L\,\frac{\partial \sigma_h}{\partial r}\Bigr)
+$$
+$$
+D_{\text{eff}}(T) \;=\; \frac{D_H(T)}{1 + K_{\text{trap}}^{\text{eff}}},
+\qquad
+D_H(T) \;=\; D_{H,0}\,\exp\!\Bigl(-\tfrac{E_a}{R\,T}\Bigr)
+$$
+$$
+C_L(r_{\text{inner}},t) \;=\; C_H(E_{\text{pipe}},\,\text{pH})\quad\text{(Langmuir entry)},\qquad
+\left.\frac{\partial C_L}{\partial r}\right|_{r_{\text{outer}}} = 0\quad\text{(Devanathan no-flux)}
+$$
+<p class="src">SOURCE: Kiuchi &amp; McLellan (1983) <em>Acta Metallurgica</em>; Turnbull (1996) on grain-boundary trap density; San Marchi (2012) on $K_{\text{trap}}$.</p>
+<p>Code: <span class="code-ref">src/hydrogen_diffusion.py → D_H, D_eff, C_H_surface_from_potential</span>; discretised via Crank–Nicolson scheme.</p>
+</div>
+
+<h3>1.3 Chen–Sutherby–Xing crack growth PDE</h3>
+<div class="eq-card">
+The crack-depth time evolution is governed by the coupled EDOs (Newman–Raju 3D semi-elliptical crack):
+$$
+\frac{da}{dt} \;=\; v_{\text{NNpHSCC}}\!\bigl(K_A,\,\Delta K_A,\,f,\,C_H\bigr),\qquad
+\frac{dc}{dt} \;=\; v_{\text{NNpHSCC}}\!\bigl(K_C,\,\Delta K_C,\,f,\,C_H\bigr)
+$$
+See <a href="#growth">Section 3</a> for the explicit form of $v_{\text{NNpHSCC}}$.
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="fracture">2. Fracture Mechanics</h2>
+
+<h3>2.1 Stress Intensity Factor — Newman–Raju surface crack</h3>
+<div class="eq-card">
+At the deepest point of a semi-elliptical surface crack ($\varphi = \pi/2$):
+$$
+K_I^{\,(A)} \;=\; \sigma_h\,\sqrt{\frac{\pi\,a}{Q}}\;F\!\Bigl(\tfrac{a}{t},\tfrac{a}{c},\,\tfrac{\pi}{2}\Bigr)
+$$
+Shape factor for $a/c \le 1$ (oblong crack):
+$$
+Q \;=\; 1 + 1.464\,(a/c)^{1.65}
+$$
+At the surface end ($\varphi = 0$), include the $M_x$ multiplier:
+$$
+K_I^{\,(C)} \;=\; \sigma_h\,\sqrt{\frac{\pi\,a}{Q}}\;F_{\text{surf}}\!\Bigl(\tfrac{a}{t}\Bigr)\;M_x,
+\qquad M_x \approx (a/c)^{0.5}
+$$
+Hoop stress in thin-wall pipe:
+$$
+\sigma_h \;=\; \frac{P\,D}{2\,t}
+$$
+<p class="src">SOURCE: Newman &amp; Raju (1981) <em>Engineering Fracture Mechanics</em> 15(1–2).</p>
+<p>Code: <span class="code-ref">src/crack_growth.py → K_I_deeppoint, K_I_surfacepoint, delta_K</span>.</p>
+</div>
+
+<h3>2.2 Stress Ratio — pressure cycle</h3>
+<div class="eq-card">
+$$
+\Delta K \;=\; K_I(P_{\max}) - K_I(P_{\min}),\qquad
+R \;=\; \frac{K_{\min}}{K_{\max}} \;=\; \frac{P_{\min}}{P_{\max}}
+$$
+For Type-I underload cycles (downstream compressor station), $R_{\text{major}} = 0.55$; for ripple cycles, $R_{\text{minor}} = 0.90$.
+<p>Code constants: <span class="code-ref">R_RATIO_MAJOR, R_RATIO_MINOR</span>.</p>
+</div>
+
+<h3>2.3 Residual stress SIF — BS 7910 Annex Q</h3>
+<div class="eq-card">
+For as-welded condition with membrane and bending residual stress components:
+$$
+K_I^{\,\text{res}} \;=\; \sqrt{\pi\,a}\,\bigl(\sigma_{\text{res}}^{m}\,Y_m + \sigma_{\text{res}}^{b}\,Y_b\bigr)
+$$
+Weight functions (Shen–Glinka simplified, normalised by $x = a/t$):
+$$
+Y_m \;=\; 1.12\,\bigl(1 - 0.31\,x + 0.09\,x^{2}\bigr),
+\qquad
+Y_b \;=\; 0.56\,(1 - 0.30\,x)
+$$
+Total SIF at HAZ:
+$$
+K_I^{\,\text{total}} \;=\; K_I^{\,\text{applied}} + K_I^{\,\text{res}}\quad\text{(in HAZ only)}
+$$
+<p class="src">SOURCE: BS 7910:2019 Annex Q, as-welded residual stress profiles.</p>
+<p>Code: <span class="code-ref">src/crack_growth.py → K_I_residual, K_I_total</span>; constants <span class="code-ref">SIGMA_RES_M_FRAC=0.10, SIGMA_RES_B_FRAC=0.30</span> (fractions of SMYS).</p>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="growth">3. NNpHSCC Crack Growth — Chen–Sutherby–Xing</h2>
+
+<h3>3.1 Combined parameter — per-cycle growth</h3>
+<div class="eq-card">
+$$
+\frac{da}{dN} \;=\; A_{\text{CF}}\,\bigl(K_{\max}\,\Delta K^{\,2}\,f_{\text{eff}}^{-0.1}\bigr)^{n}\;\Phi_{\text{HE}}(C_H)
+$$
+$$
+f_{\text{eff}} \;=\; \max\!\bigl(f,\;f_{\text{crit}}\bigr),\qquad f_{\text{crit}} = 10^{-3}\;\text{Hz}
+$$
+HEDE multiplier (Xing model):
+$$
+\Phi_{\text{HE}}(C_H) \;=\; \Bigl(\tfrac{C_H^{\,\text{bulk}}}{C_H^{\,\text{ref}}}\Bigr)^{n_{\text{HE}}},
+\qquad n_{\text{HE}} = 0.88
+$$
+<p class="src">SOURCE: Chen &amp; Sutherby (2007); Xing model via Sun, Zhou &amp; Kang (2021) JIPR.</p>
+<p>Constants: <span class="code-ref">A_CF_BASE=2.4×10⁻¹⁴, N_CF=2.0, N_HE_XING=0.88, F_CRIT_HZ=1.0×10⁻³</span>.</p>
+</div>
+
+<h3>3.2 Variable amplitude loading (Type I underload)</h3>
+<div class="eq-card">
+$$
+\frac{da}{dt} \;=\; f_{\text{major}}\,\Bigl(\tfrac{da}{dN}\Bigr)_{\text{major}}
+\;+\; f_{\text{minor}}\,\Bigl(\tfrac{da}{dN}\Bigr)_{\text{minor}}\,F_{\text{INT}}
+$$
+$F_{\text{INT}} = 10$ for Type I underload (Chen 2007). Downstream of compressor stations, this term produces ~10× the CGR of mid-pipe constant-amplitude loading.
+<p>Code: <span class="code-ref">src/pressure_spectrum.py → da_dt_variable_amplitude</span>.</p>
+</div>
+
+<h3>3.3 Time integration including model error</h3>
+<div class="eq-card">
+$$
+\left(\tfrac{da}{dt}\right)_{\!\text{real}} \;=\; \left(\tfrac{da}{dt}\right)_{\!\text{model}}\!\!\cdot\,\varepsilon_{\text{model}},\qquad
+\varepsilon_{\text{model}} \sim \operatorname{LogNormal}(\mu=1.06,\;\mathrm{COV}=61.2\%)
+$$
+<p class="src">SOURCE: Sun, Zhou &amp; Kang (2021) <em>JIPR</em> — calibrated against 39 full-scale CanmetMATERIALS tests.</p>
+<p>Code: <span class="code-ref">src/model_uncertainty.py</span>; constants <span class="code-ref">MODEL_ERROR_MEAN=1.06, MODEL_ERROR_COV=0.612</span>.</p>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="dormancy">4. Crack Dormancy &amp; BS 7910 Coalescence</h2>
+
+<h3>4.1 Stage I → Stage II transition criterion</h3>
+<div class="eq-card">
+A crack is dormant (Stage I, slow dissolution only) unless BOTH:
+$$
+\Delta K \;\ge\; \Delta K_{th}^{\,\text{Stage II}} = 2.2\;\text{MPa}\sqrt{\text{m}}
+\quad\text{AND}\quad
+C_H^{\,\text{tip}} \;\ge\; C_H^{\,\text{crit, Stage II}}
+$$
+<p class="src">SOURCE: Zhao et al. (2017) — >95 % of NNpHSCC cracks remain below 1 mm and never transition to Stage II; Shirazi et al. (2024) on dissolution-rate saturation.</p>
+<p>Code: <span class="code-ref">src/crack_growth.py → crack_is_dormant</span>.</p>
+</div>
+
+<h3>4.2 BS 7910:2019 Cl. 7.3 — coalescence rule</h3>
+<div class="eq-card">
+Two coplanar surface cracks are merged into one if the inter-crack gap $s$ is less than the smaller crack depth:
+$$
+s \;=\; |x_i - x_j| - c_i - c_j,\qquad
+\text{Merge if}\quad s \;<\; \min(a_i,\,a_j)
+$$
+The merged crack has:
+$$
+x_{\text{new}} = \tfrac{1}{2}(x_i + x_j),\quad
+c_{\text{new}} = \tfrac{1}{2}\bigl(|x_i-x_j| + c_i + c_j\bigr),\quad
+a_{\text{new}} = 1.05\,\max(a_i,a_j)
+$$
+<p class="src">SOURCE: BS 7910:2019 Clause 7.3 (interaction and re-characterisation of coplanar flaws).</p>
+<p>Code: <span class="code-ref">src/crack_colony.py → bs7910_coalescence_check</span>.</p>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="chemistry">5. Crack-Tip Chemistry — Turnbull Acidification</h2>
+
+<div class="note">
+<strong>Honest error caught while building this:</strong> the published simplification we started from used the wrong ratio (a/c instead of c/a). Elongated cracks have more stagnant electrolyte at the tip, so they must be MORE acidic, not less. Sign was inverted. Corrected formula below.
+</div>
+
+<h3>5.1 Crack-tip pH</h3>
+<div class="eq-card">
+$$
+\text{pH}_{\text{tip}} \;=\; \text{pH}_{\text{bulk}} \;-\; 0.6\,\log_{10}\!\Bigl(\tfrac{c}{a}\Bigr)
+\;-\; 0.3\,v_{\text{diss}} \;+\; \text{buffer correction}
+$$
+$$
+\text{buffer correction} \;=\; 0.3\,\log_{10}\!\Bigl(\tfrac{C_{\text{HCO}_3^-}}{C_{\text{CO}_2}} + 1\Bigr)
+$$
+Fe²⁺ hydrolysis driving the pH drop:
+$$
+\text{Fe}^{2+} + 2\,\text{H}_2\text{O} \;\rightleftharpoons\; \text{Fe(OH)}_2 + 2\,\text{H}^{+}
+$$
+<p class="src">SOURCE: Turnbull (1993); Shipilov (2002); Chen et al. (1999) <em>Acta Mater.</em> on CO₂/HCO₃⁻ buffering.</p>
+<p>Code: <span class="code-ref">src/crack_tip_chemistry.py → crack_tip_pH</span>.</p>
+</div>
+
+<h3>5.2 H entry enhancement at crack tip</h3>
+<div class="eq-card">
+$$
+C_H^{\,\text{tip}} \;=\; C_H^{\,\text{0}}\,\cdot\,10^{\,0.3\,\bigl(\text{pH}_{\text{bulk}}-\text{pH}_{\text{tip}}\bigr)}
+$$
+A drop of one pH unit (e.g. 6.8 → 5.8) raises $C_H$ by $\sim 2\times$ at the tip via the Volmer–Heyrovsky step.
+<p>Code: <span class="code-ref">src/crack_tip_chemistry.py → C_H_entry_corrected</span>.</p>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="cp">6. Cathodic Protection &amp; Hydrogen Entry</h2>
+
+<h3>6.1 Subsurface H concentration from pipe potential</h3>
+<div class="eq-card">
+$$
+C_H^{\,\text{0}}(E_{\text{pipe}},\text{pH}) \;=\; C_H^{\,\text{ref}}\,\exp\!\Bigl[\tfrac{F\,(E_{\text{free}} - E_{\text{pipe}})}{\beta_H\,R\,T}\Bigr]\;\cdot\;10^{-0.3\,(\text{pH}-7)}
+$$
+with symmetry factor $\beta_H = 0.5$ and a physical cap of 0.1 mol m⁻³ for $\alpha$-Fe at NNpHSCC service conditions.
+<p>Code: <span class="code-ref">src/hydrogen_diffusion.py → C_H_surface_from_potential</span>.</p>
+</div>
+
+<h3>6.2 Non-monotonic NNpHSCC CGR factor — asymmetric parabolic model</h3>
+<div class="eq-card">
+The relationship between CP potential and NNpHSCC crack growth rate is non-monotone. There is an optimum at $E_{\text{opt}} \approx -750$ mV CSE that minimises CGR:
+$$
+\Phi_{\text{CGR}}(E_{\text{pipe}}) \;=\;
+\begin{cases}
+1 + A_{\!+}\,(E_{\text{pipe}} - E_{\text{opt}})^{2}, & E_{\text{pipe}} \ge E_{\text{opt}}\quad\text{(anodic side)} \\[4pt]
+1 + A_{\!-}\,(E_{\text{pipe}} - E_{\text{opt}})^{2}, & E_{\text{pipe}} < E_{\text{opt}}\quad\text{(cathodic side)}
+\end{cases}
+$$
+Calibrated coefficients: $A_{+} = 816$, $A_{-} = 100$. Reported relative CGR values:
+$$
+\Phi_{\text{CGR}}(-750\;\text{mV}) = 1.0\quad\Phi_{\text{CGR}}(-850\;\text{mV}) \approx 2.0\quad
+\Phi_{\text{CGR}}(-680\;\text{mV}) \approx 5.0\quad
+\Phi_{\text{CGR}}(-1100\;\text{mV}) \approx 7\text{–}16
+$$
+<p class="src">SOURCE: Beavers &amp; Thompson (2006); Parkins (2000); Chen (2007 review). Note: NACE SP0169 −850 mV CSE is the correct criterion for general external corrosion, not for NNpHSCC management.</p>
+<p>Code: <span class="code-ref">src/cp_optimization.py → CGR_factor_from_potential</span>.</p>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="fad">7. Failure Assessment Diagram &amp; MAOP</h2>
+
+<h3>7.1 API 579-1 Level 2 FAD curve</h3>
+<div class="eq-card">
+$$
+K_r(L_r) \;=\; \bigl(1 + \tfrac{1}{2} L_r^{2}\bigr)^{-1/2}\,
+\bigl(\,0.3 + 0.7\,e^{-0.65\,L_r^{6}}\bigr),
+\qquad 0 \le L_r \le L_r^{\max}
+$$
+$$
+L_r^{\max} \;=\; \tfrac{1}{2}\Bigl(1 + \tfrac{\sigma_u}{\sigma_y}\Bigr)
+$$
+Assessment point per crack depth $a$:
+$$
+L_r = \frac{\sigma_{\text{ref}}}{\sigma_y},\qquad
+K_r = \frac{K_I(a)}{K_{\text{mat}}}
+$$
+Acceptable if $K_r \le K_r(L_r)$ and $L_r \le L_r^{\max}$.
+<p class="src">SOURCE: API 579-1/ASME FFS-1 Level 2 FAD.</p>
+<p>Code: <span class="code-ref">src/fad_assessment.py → fad_curve, fad_trajectory</span>.</p>
+</div>
+
+<h3>7.2 MAOP per code (ASME B31.8 / B31.12)</h3>
+<div class="eq-card">
+$$
+\text{MAOP} \;=\; \frac{2\,\text{SMYS}\,t}{D}\,F\,E\,T
+$$
+Design factors used:
+$$
+F_{\text{B31.8 Cl 2}} = 0.72,\quad
+F_{\text{B31.8 Cl 3}} = 0.60,\quad
+F_{\text{B31.12 H}_2} = 0.72\times 0.54 = 0.389
+$$
+Numerical example for 24″ OD × 0.500″ WT X65 (API 5L seamless, $E=T=1$):
+$$
+\text{MAOP}_{\text{Cl 2}} = 134\;\text{bar}\quad
+\text{MAOP}_{\text{Cl 3}} = 112\;\text{bar}\quad
+\text{MAOP}_{\text{B31.12 H}_2} = 73\;\text{bar}
+$$
+<p>Code: <span class="code-ref">src/fad_assessment.py → maop_comparison</span>; constants <span class="code-ref">F_B31_8_CL2, F_B31_8_CL3, HDF_B31_12</span>.</p>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="nde">8. NDE — Probability of Detection &amp; Post-Inspection</h2>
+
+<h3>8.1 EMAT / TFI Weibull POD</h3>
+<div class="eq-card">
+$$
+\operatorname{POD}(a) \;=\; 1 - \exp\!\Bigl[-\bigl(\tfrac{a}{a_{90}}\bigr)^{k}\Bigr],\qquad a_{90} = 4\;\text{mm},\quad k = 2
+$$
+At $a = a_{90}$ the Weibull scale gives $1 - 1/e \approx 63.2\%$, matching the $a_{90}$ definition convention used in PHMSA TVC.
+<p>Code: <span class="code-ref">src/pod_ilicurve.py → pod</span>.</p>
+</div>
+
+<h3>8.2 Post-inspection initial-crack distribution (rejection sampling)</h3>
+<div class="eq-card">
+The cracks that survive an ILI campaign follow:
+$$
+f_{\text{post}}(a) \;\propto\; f_{\text{prior}}(a)\,\bigl[\,1 - \operatorname{POD}(a)\bigr]
+$$
+Sampled via rejection: draw $a \sim f_{\text{prior}}$, accept with probability $1 - \operatorname{POD}(a)$.
+<p class="src">SOURCE: standard ILI post-inspection probabilistic treatment; PHMSA Technology Verification Center guidance.</p>
+<p>Code: <span class="code-ref">src/pod_ilicurve.py → sample_a0_post_inspection</span>.</p>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="uncertainty">9. Model Structural Uncertainty (Aleatory vs Epistemic)</h2>
+
+<div class="eq-card">
+LogNormal parameters from moments $(\mu, \mathrm{COV})$ used throughout:
+$$
+\mu_{\ln} \;=\; \ln(\mu) - \tfrac{1}{2}\,\sigma_{\ln}^{2},\qquad
+\sigma_{\ln} \;=\; \sqrt{\ln\!\bigl(1+\mathrm{COV}^{2}\bigr)}
+$$
+With $\mu = 1.06$ and $\mathrm{COV} = 0.612$, the resulting quantiles of $\varepsilon_{\text{model}}$ are:
+$$
+P_{05} \approx 0.36\quad P_{50} \approx 0.90\quad P_{95} \approx 2.29
+$$
+Aleatory variability (process / parameter scatter) is sampled separately from epistemic uncertainty (the model-form term $\varepsilon_{\text{model}}$).
+<p>Code: <span class="code-ref">src/model_uncertainty.py → lognormal_params_from_moments, uncertainty_quantiles, separate_uncertainty_intervals</span>.</p>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="bayes">10. Bayesian Posterior Update — Particle Filter</h2>
+
+<div class="eq-card">
+After inspection observation $a_{\text{obs}}$, the posterior over the parameter $\theta$ (e.g. initial crack depth) is:
+$$
+p(\theta\,|\,a_{\text{obs}}) \;\propto\; p(a_{\text{obs}}\,|\,\theta)\,p(\theta)
+$$
+Particle filter update of weights given a detection/non-detection event:
+$$
+w_i^{(t+1)} \;\propto\;
+\begin{cases}
+w_i^{(t)}\cdot \operatorname{POD}(\theta_i + da/dt \cdot t), & \text{if detected} \\[4pt]
+w_i^{(t)}\cdot \bigl[1 - \operatorname{POD}(\theta_i + da/dt \cdot t)\bigr], & \text{if missed}
+\end{cases}
+$$
+Effective sample size monitor:
+$$
+\text{ESS} \;=\; \frac{1}{\sum_i \bigl(w_i\bigr)^{2}}
+$$
+<p class="src">SOURCE: Straub (2004) on inspection-based reliability updating.</p>
+<p>Code: <span class="code-ref">src/bayesian_update.py → bayesian_update_particles, multi_inspection_update</span>.</p>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="rbi">11. Risk-Based Re-Inspection Interval</h2>
+
+<div class="eq-card">
+Total expected cost rate as a function of re-inspection interval $T$:
+$$
+\mathcal{C}(T) \;=\; \frac{C_{\text{insp}}}{T} \;+\; \frac{\operatorname{PoF}(T)\,\text{CoF}}{T}
+$$
+Optimal interval:
+$$
+T^{*} \;=\; \arg\min_{T\ge T_{\min}}\;\mathcal{C}(T)
+$$
+Regulatory check (PHMSA Class 3): $T_{\text{PoF lim}}$ such that $\operatorname{PoF}(T_{\text{PoF lim}}) = \operatorname{PoF}^{\text{reg}}$; require $T^{*} \le 5\;\text{yr}$ for Class 3.
+<p class="src">SOURCE: Li et al. (2018); Abubakirov et al. (2020) dynamic Bayesian network for re-assessment.</p>
+<p>Code: <span class="code-ref">src/inspection_optimizer.py → optimal_inspection_interval, PoF_from_mc_trajectory</span>.</p>
+</div>
+
+<!-- ─────────────────────────────────────────────────────────── -->
+<h2 id="h2">12. H₂ Blending — K<sub>IH</sub> Degradation</h2>
+
+<div class="eq-card">
+At pressure $P$ and blend fraction $x_{\text{H}_2}$:
+$$
+K_{IH}(x_{\text{H}_2},x_{\text{CO}_2}) \;=\; K_{IH,0}\,\bigl(1 - \alpha_{\text{H}}\,x_{\text{H}_2}^{\,m}\bigr)\,\bigl(1 + \alpha_{\text{CO}_2}\,x_{\text{CO}_2}\bigr)^{-1}
+$$
+HE index combining H₂ partial pressure and CO₂ impurity:
+$$
+\text{HE index} \;=\; \bigl(\tfrac{P_{\text{H}_2}}{P_{\text{ref}}}\bigr)^{1/2}\;\bigl(1 + 2.42\,x_{\text{CO}_2}\bigr)
+$$
+Resulting MAOP cascade (24″ X65, 0.500″ WT, B31.8 Class 2 base):
+$$
+x_{\text{H}_2}=0\%\;\Rightarrow\;134\;\text{bar},\qquad
+10\%\;\Rightarrow\;103\;\text{bar},\qquad
+30\%\;\Rightarrow\;77\;\text{bar},\qquad
+100\%\;\Rightarrow\;38\;\text{bar}
+$$
+<p class="src">SOURCE: DOAJ 2024 review; Cui et al. (2024) <em>J. Mater. Res. Technol.</em>.</p>
+<p>Code: <span class="code-ref">src/h2_blending.py → K_IH_blend, HE_index_blend, MAOP_blend</span>.</p>
+</div>
+
+<div class="disclaimer">
+<strong>Disclaimer:</strong> Research tool only. Equations and parameters are grounded in peer-reviewed literature, with non-load-bearing simplifications explicitly marked <code>[ASSUMED]</code> in the codebase. Not for FFS decisions without site-specific calibration (CGS, CIPS/DCVG, ILI vendor POD curves, line-specific operating spectrum) and independent PE review. Audit-chained outputs are produced via SHA-256 hash linking; verify with <code>chain.verify_chain()</code>.
+</div>
+
+<footer>
+  Integrity Code Series — Week 10 · Felipe Rocha · 194 / 194 tests passing · Audit-chained outputs<br>
+  Open the panels in <code>assets/figures/</code> for visual results.
+</footer>
+
+</body>
+</html>

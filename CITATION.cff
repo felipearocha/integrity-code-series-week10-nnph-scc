@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+title: "Integrity Code Series - Week 10 - NNpHSCC Full-Physics"
+message: "If you use this software, please cite it using these metadata."
+type: software
+authors:
+  - family-names: Rocha
+    given-names: Felipe
+repository-code: "https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc"
+abstract: >
+  Full-physics simulation of Near-Neutral pH Stress Corrosion Cracking (NNpHSCC) in
+  gas transmission pipelines. Implements 15 coupled mechanisms (Chen-Sutherby-Xing
+  crack growth, Newman-Raju 3D geometry, BS 7910 residual stress and coalescence,
+  Turnbull crack-tip chemistry, Sun 2021 model uncertainty, Bayesian inspection
+  update, API 579-1 FAD, B31.8/B31.12 MAOP, H2 blending) with audit-chained outputs.
+keywords:
+  - NNpHSCC
+  - pipeline integrity
+  - stress corrosion cracking
+  - fracture mechanics
+  - API 571
+  - API 579
+  - API 581
+  - BS 7910
+  - risk-based inspection
+  - cathodic protection
+  - hydrogen embrittlement
+license: MIT
+version: "1.0.0"
+date-released: "2026-05-12"
