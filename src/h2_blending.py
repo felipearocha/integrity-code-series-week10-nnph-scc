@@ -3,9 +3,9 @@ H₂ blending effect on pipeline steel integrity — NNpHSCC + fracture toughnes
 
 Key findings from 2024 literature:
 1. X65 pipeline steel elongation decreases 11.5% at 10% H₂ at 9 MPa
-   [SOURCE: DOAJ 2024 — "Total elongation reduced to 11.5% at 10% H₂, 9 MPa"]
+   [SOURCE: Cui et al. 2024 — "Total elongation reduced to 11.5% at 10% H₂, 9 MPa"]
 2. Fracture toughness K_IH reduces: ~23.5% at 3% H₂, ~43.1% at 10% H₂
-   [SOURCE: DOAJ 2024 fracture toughness data]
+   [SOURCE: Cui et al. 2024 fracture toughness data]
 3. CO₂ addition to H₂ synergistically worsens HE:
    40% CO₂ in H₂ blend → HE index 2.42× higher than pure H₂ blend
    [SOURCE: Cui et al. 2024, J. Mater. Res. Technol.]
@@ -25,14 +25,14 @@ from src.constants import K_IH_BASE_MPa, K_IC_AIR, P_OP_BAR
 
 
 # ── K_IH degradation with H₂ blending ────────────────────────────────────
-# [SOURCE: DOAJ 2024 fracture toughness data for X65 at 9 MPa]
+# [SOURCE: Cui et al. 2024 fracture toughness data for X65 at 9 MPa]
 # K_IH_blend = K_IH_base × HDF_blend(x_H2, P_H2)
 # Interpolated from: K_IH(0%) = 1.0×, K_IH(3%) ≈ 0.765×, K_IH(10%) ≈ 0.569×
 
 H2_BLEND_TABLE = {
     0.00: 1.000,    # pure natural gas
     0.05: 0.900,    # 5% H₂ [ASSUMED interpolated]
-    0.10: 0.765,    # 10% H₂ [SOURCE: ~23.5% reduction from DOAJ 2024]
+    0.10: 0.765,    # 10% H₂ [SOURCE: ~23.5% reduction from Cui et al. 2024]
     0.20: 0.650,    # 20% H₂ [ASSUMED interpolated]
     0.30: 0.570,    # 30% H₂ [SOURCE: ~43.1% reduction at 10% → extrapolated]
     0.50: 0.450,    # 50% H₂ [ASSUMED extrapolated]
@@ -86,8 +86,8 @@ def HE_index_blend(x_H2: float, x_CO2: float = 0.0) -> float:
     """
     Hydrogen embrittlement susceptibility index (HEI) as function of blend.
     HEI = (Z_0 - Z_K) / Z_0 where Z = reduction in area.
-    Normalised to 1.0 at pure H₂ at 9 MPa (worst case from DOAJ 2024).
-    [SOURCE: DOAJ 2024 fracture data]
+    Normalised to 1.0 at pure H₂ at 9 MPa (worst case from Cui et al. 2024).
+    [SOURCE: Cui et al. 2024 fracture data]
     """
     keys = sorted(H2_BLEND_TABLE.keys())
     vals = [1.0 - H2_BLEND_TABLE[k] for k in keys]   # HEI ∝ 1 - K_IH_factor
@@ -111,7 +111,7 @@ def MAOP_blend(x_H2: float, x_CO2: float = 0.0,
     - K_IH degradation factor from H₂ blend
     - ASME B31.12 HDF for pure H₂ (HDF = 0.54)
 
-    [SOURCE: ASME B31.12 Table IP-2-1; Cui et al. 2024; DOAJ 2024]
+    [SOURCE: ASME B31.12 Table IP-2-1; Cui et al. 2024]
     """
     from src.fad_assessment import maop_comparison
     comp = maop_comparison()
@@ -133,7 +133,7 @@ def MAOP_blend(x_H2: float, x_CO2: float = 0.0,
         'K_IH_base': K_IH_base, 'K_IH_blend': K_IH_eff,
         'HEI': HE_index_blend(x_H2, x_CO2),
         'reduction_pct': float((1.0 - MAOP_blend_bar/MAOP_cl2) * 100),
-        'source_note': 'Blend toughness from DOAJ 2024; CO2 synergy from Cui et al. 2024',
+        'source_note': 'Blend toughness and CO2 synergy from Cui et al. 2024',
     }
 
 

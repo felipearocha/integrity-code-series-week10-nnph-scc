@@ -47,9 +47,11 @@ def D_eff(T: float, C_L: float = None) -> float:
     where K_trap_eff is a dimensionless retardation factor representing
     the equilibrium trapping at grain boundaries and dislocations.
 
-    [ASSUMED] K_trap_eff = K_TRAP_EQ (dimensionless) = 10, calibrated to
-    D_eff ~ 1e-9 m^2/s for X65 pipeline steel per San Marchi & Somerday (2012).
-    This gives diffusion time across 12.7mm wall: ~2 days (fast equilibration).
+    [ASSUMED] K_trap_eff = K_TRAP_EQ (dimensionless) = 10, representing
+    equilibrium trapping in X65 pipeline steel (order-of-magnitude consistent
+    with San Marchi & Somerday 2012). With the bundled constants this gives
+    D_eff ~ 1.8e-10 m^2/s and a through-wall (12.7 mm) equilibration time of
+    ~10 days.
     """
     return D_H(T) / (1.0 + K_TRAP_EQ)
 
@@ -60,27 +62,30 @@ def C_H_surface_from_potential(E_pipe: float, pH: float,
                  T: float = T_OP_K,
                  beta_H: float = 0.5) -> float:
     """
-    Subsurface H concentration [mol m^-3] via Langmuir-McLean adsorption
-    combined with Volmer step kinetics.
+    Subsurface H concentration [mol m^-3] via cathodic H-entry kinetics.
 
-    C_H = C_H_ref * exp(F * (E_free - E_pipe) / (beta_H * R * T))
+    C_H = C_H(E_NACE) * exp(k_H * (E_NACE - E_pipe))
 
-    More cathodic potential -> higher H entry.
-    [ASSUMED] linear Tafel region for H recombination kinetics.
+    Anchored so C_H ~ C_H_BULK_X65 (0.02 mol/m^3) at the NACE -0.85 V CSE
+    criterion, with an effective entry-sensitivity k_H ~ 5.5 /V calibrated from
+    H-permeation trends. The previous release used the full Nernstian slope
+    F/(beta_H*R*T) ~ 78 /V, which saturated at the cap for every potential at
+    or below -0.85 V and hid the potential dependence; k_H keeps C_H varying
+    smoothly across the -0.68..-1.15 V operating/overprotection window.
 
     Parameters
     ----------
     E_pipe : float, pipe-to-soil potential [V vs CSE]
     pH     : float, near-crack-tip pH
-    beta_H : float, symmetry factor for H entry [ASSUMED 0.5]
+    beta_H : float, accepted for backward compatibility (superseded by k_H) [ASSUMED]
     """
-    from src.constants import E_FREE_V
-    delta_E = E_FREE_V - E_pipe   # positive for cathodic protection
-    C_H = C_H_SURF_REF * np.exp(FARADAY * delta_E / (beta_H * R_GAS * T))
+    from src.constants import E_CP_V, C_H_BULK_X65
+    k_H = 5.5  # 1/V [ASSUMED] effective H-entry potential sensitivity
+    C_H = C_H_BULK_X65 * np.exp(k_H * (E_CP_V - E_pipe))   # E_CP_V = -0.85 V anchor
     # pH correction: higher pH -> lower H entry (less H+ available)
     pH_factor = 10 ** (-(pH - 7.0) * 0.3)   # [ASSUMED] empirical factor
-    # Cap: physical maximum in alpha-Fe at NNpHSCC conditions ~0.1 mol/m^3 [ASSUMED per literature]
-    return float(np.clip(C_H * pH_factor, 0.0, 0.1))
+    # Cap: physical maximum in alpha-Fe at NNpHSCC conditions ~0.15 mol/m^3 [ASSUMED]
+    return float(np.clip(C_H * pH_factor, 0.0, 0.15))
 
 
 # ── Stress-assisted diffusion correction (Oriani) ─────────────────────────

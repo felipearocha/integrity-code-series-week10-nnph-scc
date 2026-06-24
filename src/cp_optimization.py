@@ -35,13 +35,14 @@ E_OPT_NNpH = -0.75    # V vs CSE  [SOURCE: literature on minimum CGR]
 E_FREE = E_FREE_V      # -0.68 V vs CSE
 
 # Parabolic CGR factor curve parameters [ASSUMED, calibrated to qualitative shape]
-# CGR_factor(E_OPT) = 1.0  (normalized to minimum)
-# CGR_factor(E=-0.85) ≈ 2.0  (standard CP slightly worse than optimal)
-# CGR_factor(E=-0.68) ≈ 5.0  (free corrosion: dissolution dominates)
-# CGR_factor(E=-1.1)  ≈ 4.0  (overprotection: excessive H)
-CP_PARABOLA_A  = 816.0   # calibrated: CGR_factor(E=-0.68)=5.0 [ASSUMED]
-CP_PARABOLA_B  = 100.0   # calibrated: CGR_factor(E=-0.85)=2.0 [ASSUMED]
-CP_FREE_FACTOR = 8.0     # CGR at free corrosion / CGR at E_opt [ASSUMED]
+# CGR_factor(E_OPT=-0.75) = 1.0   (normalized to the minimum)
+# CGR_factor(E=-0.85 NACE)   ~ 2.0   (standard CP, slightly worse than optimal)
+# CGR_factor(E=-0.68 free)   ~ 5.0   (free corrosion: anodic dissolution dominates)
+# CGR_factor(E=-1.10 overpr) ~ 13    (excess H generation -> highest CGR, matching
+#                                     the module narrative that overprotection is worst)
+CP_PARABOLA_A  = 816.0   # anodic branch, calibrated: CGR_factor(E=-0.68)=5.0 [ASSUMED]
+CP_PARABOLA_B  = 100.0   # cathodic branch, calibrated: CGR_factor(E=-0.85)=2.0 [ASSUMED]
+CP_FREE_FACTOR = 8.0     # sets the clip headroom (max factor = 16) [ASSUMED]
 
 
 def CGR_factor_from_potential(E_pipe: float) -> float:
@@ -107,11 +108,14 @@ def CGR_factor_vs_potential_curve(E_min: float = -1.2,
 def C_H_vs_potential(E_pipe: float, C_H_ref: float = 5e-6,
                       T: float = T_OP_K) -> float:
     """
-    C_H_bulk in steel as function of pipe potential.
-    Non-monotonic: maximum H entry near optimal CP window, but physical cap
-    prevents run-away at very cathodic potentials.
+    Subsurface H concentration in steel as a function of pipe potential.
 
-    [SOURCE: implicit from CGR curve — H concentration mirrors CGR on cathodic side]
+    MONOTONIC in potential: H entry increases as the potential becomes more
+    cathodic (delegated to hydrogen_diffusion.C_H_surface_from_potential).
+    The non-monotonic CGR minimum at E_opt = -0.75 V is NOT produced by C_H
+    being non-monotonic; it arises from the competition between anodic
+    dissolution (anodic side) and cathodic hydrogen embrittlement (cathodic
+    side), captured separately in CGR_factor_from_potential.
     """
     from src.hydrogen_diffusion import C_H_surface_from_potential
     from src.constants import SOIL_PH

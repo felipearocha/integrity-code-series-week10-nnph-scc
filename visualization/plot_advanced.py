@@ -105,7 +105,7 @@ def plot_h2_blending(out="assets/figures/panel_j_h2_blending.png"):
     ax.axvline(30, color='#888', linewidth=0.7, linestyle=':', alpha=0.5)
     ax.set_xlabel('H₂ blend fraction [%]', fontsize=10)
     ax.set_ylabel('K_IH [MPa√m]', fontsize=10)
-    ax.set_title('(j)  K_IH Degradation with H₂ Blend\n[SOURCE: DOAJ 2024; Cui et al. 2024]',
+    ax.set_title('(j)  K_IH Degradation with H₂ Blend\n[SOURCE: Cui et al. 2024]',
                  fontsize=10, fontweight='bold', loc='left')
     ax.legend(fontsize=8, frameon=False)
 
