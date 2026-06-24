@@ -21,7 +21,7 @@ P_CYCLE_FRAC_MINOR = 0.02   # minor ripple cycle [ASSUMED]
 N_MINOR_PER_MAJOR  = 8      # minor cycles between each underload [ASSUMED]
 FREQ_MAJOR_HZ = 1.16e-5     # 1 underload/day downstream compressor [ASSUMED]
 FREQ_MINOR_HZ = 9.26e-5     # 8 ripples/day [ASSUMED]
-F_CRIT_HZ     = 1.0e-3      # critical frequency; saturates below this [SOURCE: Xing et al.]
+F_CRIT_HZ     = 1.0e-3      # critical frequency; saturates below this [SOURCE: Xing model via Sun, Zhou & Kang 2021]
 
 # ── Regulatory MAOP ──────────────────────────────────────────────────────
 F_B31_8_CL2 = 0.72; F_B31_8_CL3 = 0.60; HDF_B31_12 = 0.54
@@ -64,7 +64,7 @@ F_MICRO_HAZ   = 1.30        # da/dt multiplier in HAZ [SOURCE: Beavers et al. 30
 # ── Chen-Sutherby-Xing crack growth model ────────────────────────────────
 # [SOURCE: Chen & Sutherby 2007; Xing et al. via Sun et al. 2021]
 # da/dN = A_CF × (K_max × ΔK² × f_eff^(-0.1))^n × HE_factor(C_H_bulk)
-A_CF_BASE    = 4.0e-14      # [ASSUMED] calibrated so da/dt = 0.3 mm/yr at a=2mm (CEPA field band), X65 Type I, with the Newman-Raju SIF
+A_CF_BASE    = 4.0e-14      # [ASSUMED] calibrated so da/dt = 0.3 mm/yr at a=2mm, c/a=4 (CEPA field band), X65 Type I, with the Newman-Raju SIF
 N_CF         = 2.0          # exponent n [SOURCE: Chen & Sutherby 2007 n≈2]
 N_HE_XING    = 0.88         # HEDE exponent for X52 [SOURCE: Sun et al. 2021, Xing model]
 

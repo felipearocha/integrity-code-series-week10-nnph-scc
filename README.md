@@ -195,7 +195,7 @@ integrity-code-series-week-10_nnph_scc/
 
 | Parameter | Value | Basis |
 |-----------|-------|-------|
-| A_CF_BASE | 2.4×10^-14 | Calibrated to CEPA field: 0.3 mm/yr at a=2mm |
+| A_CF_BASE | 4.0×10^-14 | Calibrated to CEPA field: 0.3 mm/yr at a=2mm (c/a=4), Newman-Raju SIF |
 | K_IH base | 25 MPa√m | CEPA RP 3rd Ed. range 15–35 |
 | K_IH HAZ | 17.5 MPa√m | 70% of base [ASSUMED] |
 | F_INT | 10 | Chen 2007 underload interaction |

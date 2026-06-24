@@ -5,7 +5,7 @@ Implements:
 1. Chen-Sutherby combined parameter [SOURCE: Chen & Sutherby 2007]
 2. Xing HEDE multiplier [SOURCE: Xing et al. via Sun et al. 2021]
 3. Variable amplitude loading with underload interaction [SOURCE: Chen 2007]
-4. Frequency saturation at f_crit = 10^-3 Hz [SOURCE: Xing et al.]
+4. Frequency saturation at f_crit = 10^-3 Hz [SOURCE: Xing model via Sun, Zhou & Kang 2021]
 5. Crack dormancy criterion Stage I → Stage II [SOURCE: Zhao et al. 2017]
 6. 3D semi-elliptical crack shape (a, c coupled EDOs) [SOURCE: Newman-Raju 1981]
 7. Residual stress K_I contribution [SOURCE: BS 7910 Annex Q]
@@ -80,8 +80,9 @@ def K_I_surfacepoint(a_m: float, c_m: float,
     F_s = [M1 + M2 (a/t)^2 + M3 (a/t)^4] * f_phi * g
     f_phi(phi=0) = sqrt(a/c),   g(phi=0) = 1.1 + 0.35 (a/t)^2
 
-    For a/c < 1 the (f_phi * g) factor is below 1, so K at the surface point is
-    below K at the deep point, as expected.
+    For the elongated NNpHSCC flaws of interest (a/c <~ 0.75, i.e. c/a >~ 1.3)
+    the (f_phi * g) factor is below 1, so K at the surface point is below K at
+    the deep point; near a/c = 1 (semicircular) the two converge and can cross.
     """
     P_MPa = P_bar * 0.1
     sigma_h = P_MPa * D / (2.0 * t)

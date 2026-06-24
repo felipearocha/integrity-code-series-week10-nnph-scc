@@ -117,7 +117,6 @@ def simulate_colony(E_pipe: float = E_CP_V,
     ])
 
     t_years = np.linspace(0, t_end_yr, n_t)
-    a_crit = 3.3e-3  # K_IH crossing depth [m]
 
     results = []
     fracture_times = []

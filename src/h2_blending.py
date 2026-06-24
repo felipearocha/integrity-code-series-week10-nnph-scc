@@ -27,7 +27,7 @@ from src.constants import K_IH_BASE_MPa, K_IC_AIR, P_OP_BAR
 # ── K_IH degradation with H₂ blending ────────────────────────────────────
 # [SOURCE: Cui et al. 2024 fracture toughness data for X65 at 9 MPa]
 # K_IH_blend = K_IH_base × HDF_blend(x_H2, P_H2)
-# Interpolated from: K_IH(0%) = 1.0×, K_IH(3%) ≈ 0.765×, K_IH(10%) ≈ 0.569×
+# Interpolated from: K_IH(0%) = 1.0×, K_IH(10%) ≈ 0.765×, K_IH(30%) ≈ 0.570×
 
 H2_BLEND_TABLE = {
     0.00: 1.000,    # pure natural gas

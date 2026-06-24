@@ -76,8 +76,8 @@ class PressureSpectrum:
 
 
 def f_eff(f_Hz):
-    """Saturate frequency at f_crit [SOURCE: Xing et al.] — below f_crit the
-    environment controls, not fatigue frequency."""
+    """Saturate frequency at f_crit [SOURCE: Xing model via Sun, Zhou & Kang 2021]
+    — below f_crit the environment controls, not fatigue frequency."""
     return max(f_Hz, F_CRIT_HZ)
 
 
