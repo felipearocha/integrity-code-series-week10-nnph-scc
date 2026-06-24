@@ -46,7 +46,7 @@ sampling propagates eight uncertain parameters and — critically — samples th
 COV = 61.2 %) as an explicit epistemic variable rather than a footnote.
 A Straub-style particle filter [@straub_2004] performs Bayesian posterior updates
 from in-line inspection events, and a SHA-256 hash-chained audit log records every
-run for traceability. The package ships with 204 automated tests, a CI workflow,
+run for traceability. The package ships with 205 automated tests, a CI workflow,
 analytical benchmarks against textbook constants, and a Zenodo-archived release
 [@rocha_zenodo_2026].
 
@@ -86,7 +86,7 @@ alternative crack-growth laws, hydrogen-diffusion models or POD curves and
 compare the integrated outcome on identical Monte Carlo seeds. Graduate students
 in corrosion and fracture mechanics can use the LaTeX equation reference in
 `equations.html`, the analytical benchmarks in `validation/benchmarks.py`, and
-the 204 unit tests as a worked example of how the standards (BS 7910:2019,
+the 205 unit tests as a worked example of how the standards (BS 7910:2019,
 API 579-1, API 571, NACE TM0316) compose into an end-to-end integrity model.
 
 # Acknowledgements

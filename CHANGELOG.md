@@ -7,10 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- 10 Gate-3 hardening tests (audit-chain tamper detection, seeded reproducibility of the model-error sampler, and crack-growth timestep convergence), bringing the suite to **204 tests** (clears the ICS2 QC Gate-3 >200 minimum).
+### Fixed (physics) — found in a rigorous physics/scholarship audit
+- **Monte Carlo now integrates.** `run_monte_carlo` previously froze the crack-growth rate at the initial depth `a0` and extrapolated linearly, so PoF was identical for any `n_t` and under-predicted terminal growth. It now steps depth-by-depth (re-evaluating the rate as the crack deepens) via a new `_integrate_sample`, and PoF converges with `n_t`.
+- **Failure criterion is now per-zone.** PoF used a single hard-coded 3.3 mm threshold; samples now fail when `K_I` reaches the zone-dependent `K_IH` (HAZ crosses far earlier than base), removing the low bias on the most susceptible population.
+- **Stress-intensity factor corrected to the true Newman-Raju surface-crack solution.** The deep-point boundary-correction was a Tada single-edge-crack polynomial mislabelled "Newman-Raju" that over-predicted `K` by up to ~2x for `a/t > 0.5`; replaced with `F = M1 + M2(a/t)^2 + M3(a/t)^4`. `A_CF_BASE` recalibrated (2.4e-14 -> 4.0e-14) to keep da/dt = 0.3 mm/yr at a = 2 mm, and `integrate_full` now terminates at fracture (`K_I >= K_IH`) so post-rupture rates never pollute the trajectory.
+- **Dormancy penalty is now applied** (was dead code: dormant and active cracks integrated identically), and the reported velocity `v(t)` now uses the same variable-amplitude rate law that advances the geometry (previously ~4x inconsistent).
+- Clarified that the "Xing HEDE" model is cited second-hand via the Sun, Zhou & Kang 2021 review (no separate primary Xing reference is bundled).
 
-### Fixed
+### Added
+- 11 hardening/regression tests (audit-chain tamper detection, seeded reproducibility, timestep convergence, and a lock against the frozen-rate Monte Carlo bug), bringing the suite to **205 tests** (clears the ICS2 QC Gate-3 >200 minimum).
+
+### Fixed (packaging/docs)
 - Corrected the `sun_zhou_kang_2021` BibTeX entry in `paper/paper.bib`: it pointed to a burst-capacity paper (IJPVP) but is cited for the NNpHSCC crack-growth model error (COV = 61.2%); now references the Sun, Zhou & Kang combined-model paper in *Journal of Infrastructure Preservation and Resilience* (vol. 2, art. 6), matching the project's `.zenodo.json`.
 - Synced the README "Repository Structure" tree with the real module names (removed stale `_v2`/`_v3` suffixes, a non-existent `linkedin/` folder, and the wrong test/visualization filenames); figure count corrected to 9 panels.
 - Removed an unresolved `[SOURCE: ...]` tag rendered as prose in the Unityville incident line and attributed both motivating incidents to their official investigating bodies.

@@ -274,7 +274,7 @@ class TestParametrized:
 
 # ── Regression locked values ───────────────────────────────────────────────
 class TestRegression:
-    def test_A_CF_base(self): assert abs(A_CF_BASE - 2.4e-14)/2.4e-14 < 0.01
+    def test_A_CF_base(self): assert abs(A_CF_BASE - 4.0e-14)/4.0e-14 < 0.01  # recalibrated with Newman-Raju SIF
     def test_K_IH_base(self): assert abs(K_IH_BASE_MPa - 25.0) < 0.01
     def test_MODEL_COV(self): assert abs(MODEL_ERROR_COV - 0.612) < 0.005
     def test_dormancy_threshold(self): assert abs(A_DORMANCY_MM - 1.0) < 0.01
@@ -751,3 +751,17 @@ class TestTimestepConvergence:
         a_c, a_f = coarse['a'][-1], fine['a'][-1]
         rel = abs(a_c - a_f) / a_f
         assert rel < 0.05, f"timestep not converged: rel diff {rel:.3%}"
+
+    def test_mc_integrates_not_frozen(self):
+        # Regression for the frozen-rate Monte Carlo bug: the old _da_dt_fast
+        # extrapolated linearly from a0, so PoF was identical for any n_t and
+        # growth was a straight line. A propagating crack must accelerate
+        # (super-linear), which only proper step-by-step integration produces.
+        from src.monte_carlo import _integrate_sample
+        t = np.linspace(0, 20, 41)
+        a_traj, failed, t_fail = _integrate_sample(
+            -0.85, 0.05, 2.5, 0.0, 0, 1.0, 1.0, 12.0, t)  # aggressive base sample
+        grow = np.diff(a_traj)
+        grow = grow[grow > 1e-9]                  # pre-fracture growth increments
+        assert grow.size >= 3
+        assert grow[-1] > 1.5 * grow[0]           # accelerating, not constant-rate

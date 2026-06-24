@@ -109,7 +109,7 @@ animate_crack_colony(colony)
 print(f"\n{'='*72}")
 print(f"Complete in {time.time()-t_wall:.0f}s")
 n_figs = len(os.listdir("assets/figures"))
-print(f"Panels: {n_figs} | Tests: run `pytest tests/ -q` (204 tests)")
+print(f"Panels: {n_figs} | Tests: run `pytest tests/ -q` (205 tests)")
 print(f"Key mechanisms: Chen-Sutherby-Xing | VA Type I | Dormancy | POD | ε_model | Bayes")
 print(f"{'='*72}")
 

@@ -4,7 +4,7 @@
 [![Release](https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/actions/workflows/release.yml/badge.svg)](https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-204%20passed-brightgreen.svg)](#validation)
+[![Tests](https://img.shields.io/badge/tests-205%20passed-brightgreen.svg)](#validation)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20172241.svg)](https://doi.org/10.5281/zenodo.20172241)
 
@@ -35,7 +35,7 @@ cd integrity-code-series-week-10_nnph_scc
 pip install -e .[dev]
 
 # Validate
-pytest tests/ -q                          # 204 tests
+pytest tests/ -q                          # 205 tests
 python -m validation.benchmarks           # textbook constants
 
 # Reproduce all panels + audit-chained outputs
@@ -164,7 +164,7 @@ integrity-code-series-week-10_nnph_scc/
 ├── visualization/
 │   ├── plot_all.py               6 core panels + colony GIF generator
 │   └── plot_advanced.py          3 extended panels (CP, H2, inspection optimizer)
-├── tests/test_week10.py          204 tests
+├── tests/test_week10.py          205 tests
 ├── assets/figures/               9 panels (300 DPI)
 ├── assets/animations/            Crack colony GIF
 └── assets/audit_chain.json

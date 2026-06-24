@@ -64,7 +64,7 @@ F_MICRO_HAZ   = 1.30        # da/dt multiplier in HAZ [SOURCE: Beavers et al. 30
 # ── Chen-Sutherby-Xing crack growth model ────────────────────────────────
 # [SOURCE: Chen & Sutherby 2007; Xing et al. via Sun et al. 2021]
 # da/dN = A_CF × (K_max × ΔK² × f_eff^(-0.1))^n × HE_factor(C_H_bulk)
-A_CF_BASE    = 2.4e-14      # [ASSUMED] calibrated to CEPA field observations: 0.3 mm/yr at a=2mm, X65 Type I spectrum
+A_CF_BASE    = 4.0e-14      # [ASSUMED] calibrated so da/dt = 0.3 mm/yr at a=2mm (CEPA field band), X65 Type I, with the Newman-Raju SIF
 N_CF         = 2.0          # exponent n [SOURCE: Chen & Sutherby 2007 n≈2]
 N_HE_XING    = 0.88         # HEDE exponent for X52 [SOURCE: Sun et al. 2021, Xing model]
 

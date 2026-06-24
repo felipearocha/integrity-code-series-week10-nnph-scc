@@ -29,33 +29,42 @@ SEC_PER_YR = 365.25 * 24 * 3600
 
 # ── SIF functions ─────────────────────────────────────────────────────────
 
+def _newman_raju_M(ac: float) -> tuple:
+    """Newman-Raju (1981) geometry coefficients M1, M2, M3 for a/c <= 1."""
+    M1 = 1.13 - 0.09 * ac
+    M2 = -0.54 + 0.89 / (0.2 + ac)
+    M3 = 0.5 - 1.0 / (0.65 + ac) + 14.0 * (1.0 - ac) ** 24
+    return M1, M2, M3
+
+
 def K_I_deeppoint(a_m: float, c_m: float,
                    P_bar: float = P_OP_BAR,
                    D: float = PIPE_OD, t: float = PIPE_WT) -> float:
     """
-    K_I at deepest point of semi-elliptical surface crack (Mode I).
-    Newman-Raju (1981) solution for surface crack in flat plate / pipe wall.
-    [SOURCE: Newman & Raju 1981 Engineering Fracture Mechanics 15(1-2)]
+    K_I at the deepest point (phi = pi/2) of a semi-elliptical surface crack (Mode I).
+    Newman & Raju (1981) boundary-correction factor for a surface crack in a
+    finite-thickness plate under membrane (hoop) loading.
+    [SOURCE: Newman & Raju 1981, Eng. Fract. Mech. 15(1-2):185-192]
 
-    K_I = sigma_h × sqrt(pi × a / Q) × F(a/t, a/c, phi=pi/2)
-    Q = shape factor for semi-ellipse: Q = 1 + 1.464*(a/c)^1.65 for a/c <= 1
+    K_I = sigma_h * sqrt(pi * a / Q) * F(a/t, a/c, phi=pi/2)
+    Q   = 1 + 1.464 (a/c)^1.65                              (a/c <= 1)
+    F   = M1 + M2 (a/t)^2 + M3 (a/t)^4    with g = f_phi = f_w = 1 at the deep point.
 
-    Returns K_I [MPa sqrt(m)], capped at fracture.
+    (The previous release used a Tada single-edge-crack front-face polynomial here,
+    which over-predicted K by up to ~2x for a/t > 0.5 and was mislabelled
+    Newman-Raju; this is the true surface-crack solution. f_w ~ 1 for a pipe wall
+    where the circumference >> 2c.)
+
+    Returns K_I [MPa sqrt(m)].
     """
     P_MPa = P_bar * 0.1
     sigma_h = P_MPa * D / (2.0 * t)  # hoop stress [MPa]
-    x = min(a_m / t, 0.97)
+    x = min(a_m / t, 0.95)
     ac = min(a_m / max(c_m, 1e-6), 1.0)
 
-    # Shape factor Q (Newman-Raju)
-    if ac <= 1.0:
-        Q = 1.0 + 1.464 * (ac ** 1.65)
-    else:
-        Q = 1.0 + 1.464 * ((1.0/ac) ** 1.65)
-
-    # Boundary correction F at phi=pi/2 (deepest point)
-    # Simplified Tada flat-plate for surface crack (conservative)
-    F = (1.12 - 0.231*x + 10.55*x**2 - 21.72*x**3 + 30.39*x**4)
+    Q = 1.0 + 1.464 * (ac ** 1.65)
+    M1, M2, M3 = _newman_raju_M(ac)
+    F = M1 + M2 * x**2 + M3 * x**4        # phi = pi/2: g = f_phi = f_w = 1
 
     KI = sigma_h * np.sqrt(np.pi * a_m / Q) * F
     return float(np.clip(KI, 0.0, 1e4))
@@ -65,26 +74,27 @@ def K_I_surfacepoint(a_m: float, c_m: float,
                       P_bar: float = P_OP_BAR,
                       D: float = PIPE_OD, t: float = PIPE_WT) -> float:
     """
-    K_I at surface end of semi-elliptical crack (phi=0).
-    Controls surface propagation rate dc/dt.
+    K_I at the surface end (phi = 0) of the semi-elliptical crack; controls dc/dt.
     [SOURCE: Newman & Raju 1981]
-    K at phi=0 is typically lower than at phi=pi/2 for a/c < 1.
+
+    F_s = [M1 + M2 (a/t)^2 + M3 (a/t)^4] * f_phi * g
+    f_phi(phi=0) = sqrt(a/c),   g(phi=0) = 1.1 + 0.35 (a/t)^2
+
+    For a/c < 1 the (f_phi * g) factor is below 1, so K at the surface point is
+    below K at the deep point, as expected.
     """
     P_MPa = P_bar * 0.1
     sigma_h = P_MPa * D / (2.0 * t)
+    x = min(a_m / t, 0.95)
     ac = min(a_m / max(c_m, 1e-6), 1.0)
 
-    if ac <= 1.0:
-        Q = 1.0 + 1.464 * (ac ** 1.65)
-    else:
-        Q = 1.0 + 1.464 * ((1.0/ac) ** 1.65)
+    Q = 1.0 + 1.464 * (ac ** 1.65)
+    M1, M2, M3 = _newman_raju_M(ac)
+    f_phi = np.sqrt(ac)
+    g = 1.1 + 0.35 * x**2
+    F_s = (M1 + M2 * x**2 + M3 * x**4) * f_phi * g
 
-    # At phi=0 (surface): Mx factor reduces K_I
-    Mx = ac ** 0.5  # simplified Newman-Raju Mx for phi=0
-    x = min(a_m / t, 0.97)
-    F_surf = 0.627 + 2.084*x - 1.703*x**2  # [ASSUMED simplified]
-
-    KI_surf = sigma_h * np.sqrt(np.pi * a_m / Q) * F_surf * Mx
+    KI_surf = sigma_h * np.sqrt(np.pi * a_m / Q) * F_s
     return float(np.clip(KI_surf, 0.0, 1e4))
 
 
@@ -170,36 +180,40 @@ def crack_is_dormant(a_m: float, c_m: float, C_H_tip: float,
 def crack_shape_evolution(a0_m: float, c0_m: float,
                            spectrum: PressureSpectrum,
                            C_H_bulk: float,
-                           K_I_func, delta_K_func,
+                           K_I_func=None, delta_K_func=None,
                            microstructure_factor: float = 1.0,
                            model_error: float = 1.0,
+                           dormancy_factor: float = 1.0,
                            dt_s: float = 30*86400) -> tuple:
     """
-    Advance (a, c) by dt_s seconds using coupled EDOs.
+    Advance (a, c) by dt_s seconds using coupled EDOs, with the SAME
+    variable-amplitude rate law that integrate_full reports as v(t).
 
-    da/dt = da_dt(K_A, ΔK_A)   deepest point
-    dc/dt = da_dt(K_C, ΔK_C)   surface point
+    da/dt = dormancy_factor * da_dt_VA(deepest point)
+    dc/dt = dormancy_factor * da_dt_VA(surface point)
+
+    dormancy_factor < 1 applies the Stage-I slow-dissolution penalty for a
+    dormant crack (so the reported velocity and the advance use one rate law).
+    K_I_func / delta_K_func are accepted for backward compatibility but the
+    deep- and surface-point SIFs are built internally so (a, c) stay consistent.
 
     Returns: (a_new [m], c_new [m])
     """
-    K_max_A = K_I_deeppoint(a0_m, c0_m, spectrum.P_max)
-    dK_A    = delta_K(a0_m, c0_m, spectrum.P_max, spectrum.R_major())
-    K_max_C = K_I_surfacepoint(a0_m, c0_m, spectrum.P_max)
-    dK_C    = delta_K_surface(a0_m, c0_m, spectrum.P_max, spectrum.R_major())
+    da_dt_A = da_dt_variable_amplitude(
+        a0_m, spectrum, C_H_bulk,
+        K_I_func=lambda am, P: K_I_deeppoint(am, c0_m, P),
+        delta_K_func=lambda am, P, R: delta_K(am, c0_m, P, R),
+        microstructure_factor=microstructure_factor, model_error=model_error,
+        spectrum_type=spectrum.type)
+    dc_dt_C = da_dt_variable_amplitude(
+        a0_m, spectrum, C_H_bulk,
+        K_I_func=lambda am, P: K_I_surfacepoint(am, c0_m, P),
+        delta_K_func=lambda am, P, R: delta_K_surface(am, c0_m, P, R),
+        microstructure_factor=microstructure_factor, model_error=model_error,
+        spectrum_type=spectrum.type)
 
-    da_dN_A = da_dN_Chen_Xing(a0_m, K_max_A, dK_A, spectrum.f_major,
-                                C_H_bulk, microstructure_factor=microstructure_factor,
-                                model_error=model_error)
-    da_dN_C = da_dN_Chen_Xing(a0_m, K_max_C, dK_C, spectrum.f_minor,
-                                C_H_bulk, microstructure_factor=microstructure_factor,
-                                model_error=model_error)
-
-    # Type I underload: apply interaction to depth direction too
-    da_dt_A = spectrum.f_major * da_dN_A + spectrum.f_minor * da_dN_A * 0.5
-    dc_dt_C = spectrum.f_major * da_dN_C + spectrum.f_minor * da_dN_C * 0.5
-
-    a_new = min(a0_m + da_dt_A * dt_s, PIPE_WT * 0.98)
-    c_new = c0_m + dc_dt_C * dt_s
+    a_new = min(a0_m + dormancy_factor * da_dt_A * dt_s, PIPE_WT * 0.98)
+    c_new = c0_m + dormancy_factor * dc_dt_C * dt_s
     return float(max(a_new, a0_m)), float(max(c_new, c0_m))
 
 
@@ -232,6 +246,7 @@ def integrate_full(a0_m: float, c0_m: float,
 
     a, c = float(a0_m), float(c0_m)
     fracture_time_yr = np.inf
+    fractured = False
 
     for k in range(n_steps + 1):
         t_s = k * dt_s
@@ -242,33 +257,32 @@ def integrate_full(a0_m: float, c0_m: float,
         ac_arr[k]  = a / max(c, 1e-6)
         dormant_arr[k] = crack_is_dormant(a, c, C_H_tip, P_bar, K_IH, zone)
 
-        # VA crack growth
-        da_dt_val = da_dt_variable_amplitude(
-            a, spectrum, C_H_bulk,
-            K_I_func=lambda am, P: K_I_deeppoint(am, c, P),
-            delta_K_func=lambda am, P, R: delta_K(am, c, P, R),
-            microstructure_factor=f_micro,
-            model_error=model_error,
-            spectrum_type=spectrum.type
-        )
-        v_arr[k] = da_dt_val
+        # Fracture: once K_I reaches K_IH the crack goes unstable (rupture);
+        # sub-critical NNpHSCC growth stops and the geometry is frozen, so the
+        # post-fracture rate explosion never pollutes the trajectory.
+        if KI_arr[k] >= K_IH:
+            if not fractured:
+                fracture_time_yr = t_s / SEC_PER_YR
+                fractured = True
+            v_arr[k] = 0.0
+        else:
+            v_arr[k] = da_dt_variable_amplitude(
+                a, spectrum, C_H_bulk,
+                K_I_func=lambda am, P: K_I_deeppoint(am, c, P),
+                delta_K_func=lambda am, P, R: delta_K(am, c, P, R),
+                microstructure_factor=f_micro,
+                model_error=model_error,
+                spectrum_type=spectrum.type
+            )
 
-        # Check fracture
-        if KI_arr[k] >= K_IH and fracture_time_yr == np.inf:
-            fracture_time_yr = t_s / SEC_PER_YR
-
-        if k < n_steps:
-            if dormant_arr[k]:
-                # Stage I slow dissolution only — 10% of Stage II rate [ASSUMED]
-                da_dt_s1 = da_dt_val * 0.10
-            else:
-                da_dt_s1 = da_dt_val
-
+        if k < n_steps and not fractured:
+            # Stage-I dormant cracks advance at 10% of the Stage-II rate [ASSUMED];
+            # the same VA rate law (v_arr above) advances the geometry.
+            dormancy_factor = 0.10 if dormant_arr[k] else 1.0
             a, c = crack_shape_evolution(a, c, spectrum, C_H_bulk,
-                                          K_I_func=lambda am, P: K_I_deeppoint(am, c, P),
-                                          delta_K_func=lambda am, P, R: delta_K(am, c, P, R),
                                           microstructure_factor=f_micro,
                                           model_error=model_error,
+                                          dormancy_factor=dormancy_factor,
                                           dt_s=dt_s)
 
     return {
