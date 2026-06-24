@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- 10 Gate-3 hardening tests (audit-chain tamper detection, seeded reproducibility of the model-error sampler, and crack-growth timestep convergence), bringing the suite to **204 tests** (clears the ICS2 QC Gate-3 >200 minimum).
+
+### Fixed
+- Corrected the `sun_zhou_kang_2021` BibTeX entry in `paper/paper.bib`: it pointed to a burst-capacity paper (IJPVP) but is cited for the NNpHSCC crack-growth model error (COV = 61.2%); now references the Sun, Zhou & Kang combined-model paper in *Journal of Infrastructure Preservation and Resilience* (vol. 2, art. 6), matching the project's `.zenodo.json`.
+- Synced the README "Repository Structure" tree with the real module names (removed stale `_v2`/`_v3` suffixes, a non-existent `linkedin/` folder, and the wrong test/visualization filenames); figure count corrected to 9 panels.
+- Removed an unresolved `[SOURCE: ...]` tag rendered as prose in the Unityville incident line and attributed both motivating incidents to their official investigating bodies.
+
+### Changed
+- Raised the supported-Python floor to **3.11** across the badge, `pyproject.toml` (`requires-python`, classifiers, ruff `target-version`) and `CONTRIBUTING.md`, matching the CI matrix (3.11, 3.12).
+
 ## [1.0.1] - 2026-05-13
 
 ### Added

@@ -3,8 +3,8 @@
 [![CI](https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/actions/workflows/ci.yml/badge.svg)](https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/actions/workflows/ci.yml)
 [![Release](https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/actions/workflows/release.yml/badge.svg)](https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-194%20passed-brightgreen.svg)](#validation)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://img.shields.io/badge/tests-204%20passed-brightgreen.svg)](#validation)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20172241.svg)](https://doi.org/10.5281/zenodo.20172241)
 
@@ -35,7 +35,7 @@ cd integrity-code-series-week-10_nnph_scc
 pip install -e .[dev]
 
 # Validate
-pytest tests/ -q                          # 194 tests
+pytest tests/ -q                          # 204 tests
 python -m validation.benchmarks           # textbook constants
 
 # Reproduce all panels + audit-chained outputs
@@ -50,8 +50,8 @@ Near-Neutral pH Stress Corrosion Cracking (NNpHSCC) accounts for a major fractio
 reportable incidents on gas transmission pipelines in North America. Two specific incidents
 motivate this package:
 
-- **2018 Prince George, BC rupture** — 914mm gas pipeline; NNpHSCC cause; downstream of compressor
-- **2015 Unityville, PA rupture** — 609mm gas pipeline; NNpHSCC; [SOURCE: Sun et al. 2021 JIPR]
+- **2018 Prince George, BC rupture** — 914mm gas pipeline; NNpHSCC; downstream of a compressor station (Transportation Safety Board of Canada investigation)
+- **2015 Unityville, PA rupture** — 609mm gas pipeline; NNpHSCC (US DOT/PHMSA failure investigation)
 
 PHMSA §192.611(a)(4) (effective March 16, 2026) requires integrity assessment for class location
 changes. This package provides the physics foundation for that assessment.
@@ -135,38 +135,39 @@ uncertainty as a sampled variable — not a footnote.
 ## Repository Structure
 
 ```
-integrity_code_series_week10v3_nnph_scc_fullphysics/
+integrity-code-series-week-10_nnph_scc/
 ├── run_all.py
 ├── requirements.txt
+├── pyproject.toml
 ├── README.md
 ├── conftest.py
+├── equations.html                LaTeX equations reference
 ├── src/
 │   ├── constants.py              All parameters with [SOURCE] tags
 │   ├── hydrogen_diffusion.py     Oriani-Fick PDE + C_H_surface_from_potential
 │   ├── pressure_spectrum.py      Chen-Sutherby-Xing + VA loading
 │   ├── microstructure.py         HAZ vs base metal zones (incl. vintage ERW)
-│   ├── crack_growth_v2.py        3D shape + residual stress + dormancy
+│   ├── crack_growth.py           3D shape + residual stress + dormancy
 │   ├── crack_tip_chemistry.py    Turnbull acidification
 │   ├── model_uncertainty.py      Sun 2021 COV=61.2% epistemic error
 │   ├── pod_ilicurve.py           ILI POD + post-inspection a0
-│   ├── crack_colony_v2.py        Full-physics colony + BS 7910 coalescence
+│   ├── crack_colony.py           Full-physics colony + BS 7910 coalescence
 │   ├── bayesian_update.py        Particle filter posterior
 │   ├── fad_assessment.py         API 579-1 Level 2 FAD
-│   ├── monte_carlo_v2.py         8-param MC with all gaps closed
+│   ├── monte_carlo.py            8-param Monte Carlo (post-ILI)
 │   ├── surrogate_gbr.py          GBR surrogate (8 features)
 │   ├── audit_chain.py            SHA-256 hash-linked audit log
-│   ├── cp_optimization.py        Non-monotonic CP curve (v3)
-│   ├── h2_blending.py            H2 blend K_IH degradation (v3)
-│   └── inspection_optimizer.py   RBI re-inspection interval (v3)
+│   ├── cp_optimization.py        Non-monotonic CP curve
+│   ├── h2_blending.py            H2 blend K_IH degradation
+│   └── inspection_optimizer.py   RBI re-inspection interval
 ├── validation/benchmarks.py      Analytical benchmarks
 ├── visualization/
-│   ├── plot_all_v2.py            8 v2 panels + colony GIF generator
-│   └── plot_new_v3.py            3 v3 panels (CP, H2, inspection optimizer)
-├── tests/test_week10v2.py        194 tests
-├── assets/figures/               11 panels (300 DPI)
+│   ├── plot_all.py               6 core panels + colony GIF generator
+│   └── plot_advanced.py          3 extended panels (CP, H2, inspection optimizer)
+├── tests/test_week10.py          204 tests
+├── assets/figures/               9 panels (300 DPI)
 ├── assets/animations/            Crack colony GIF
-├── assets/audit_chain.json
-└── linkedin/                     Post drafts (not in GitHub)
+└── assets/audit_chain.json
 ```
 
 ---

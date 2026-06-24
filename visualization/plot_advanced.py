@@ -27,7 +27,7 @@ def plot_cp_optimization(out="assets/figures/panel_i_cp_optimization.png"):
     curve = CGR_factor_vs_potential_curve(-1.2, -0.55)
     ax.plot(curve['E'], curve['CGR_factor'], color=COLOR_NAVY, linewidth=2.0,
             label='CGR factor (normalised to E_opt)')
-    ax.axvline(E_OPT_NNpH, color='#2a8c2a', linewidth=1.2, linestyle='--',
+    ax.axvline(E_OPT_NNpH, color=COLOR_TEAL, linewidth=1.2, linestyle='--',
                label=f'E_opt = {E_OPT_NNpH} V CSE\n(minimum CGR for NNpHSCC)')
     ax.axvline(E_CP_V, color=COLOR_RED, linewidth=1.0, linestyle=':',
                label=f'NACE -850 mV criterion\nCGR = {curve["CGR_at_NACE"]:.1f}× optimal')
@@ -35,7 +35,7 @@ def plot_cp_optimization(out="assets/figures/panel_i_cp_optimization.png"):
                label=f'Free corrosion E = {E_FREE_V} V\nCGR = {curve["CGR_at_free"]:.1f}× optimal')
 
     ax.fill_betweenx([1, 20], E_OPT_NNpH-0.03, E_OPT_NNpH+0.03,
-                      alpha=0.15, color='#2a8c2a', label='Optimal CP window')
+                      alpha=0.15, color=COLOR_TEAL, label='Optimal CP window')
     ax.fill_betweenx([1, 20], -1.1, -0.85, alpha=0.08, color=COLOR_RED,
                       label='Overprotection zone')
     ax.fill_betweenx([1, 20], -0.68, -0.55, alpha=0.08, color=COLOR_STEEL,
@@ -63,7 +63,7 @@ def plot_cp_optimization(out="assets/figures/panel_i_cp_optimization.png"):
     T_vals = T_base / np.array([CGR_factor_from_potential(E) for E in E_vals])
 
     ax2.plot(E_vals, T_vals, color=COLOR_NAVY, linewidth=1.8, label='Service life estimate')
-    ax2.axvline(E_OPT_NNpH, color='#2a8c2a', linewidth=1.2, linestyle='--',
+    ax2.axvline(E_OPT_NNpH, color=COLOR_TEAL, linewidth=1.2, linestyle='--',
                 label=f'E_opt = {E_OPT_NNpH} V (max life)')
     ax2.axvline(E_CP_V, color=COLOR_RED, linewidth=1.0, linestyle=':',
                 label=f'NACE -850 mV: {T_base/CGR_factor_from_potential(E_CP_V):.0f} yr')

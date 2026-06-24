@@ -3,10 +3,16 @@ import os, numpy as np
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt, matplotlib.patches as mpatches
 from matplotlib.animation import FuncAnimation, PillowWriter
+from matplotlib.colors import LinearSegmentedColormap
 from src.constants import (COLOR_NAVY, COLOR_STEEL, COLOR_RED, COLOR_TEAL,
-                            COLOR_CHARCOAL, COLOR_PURPLE,
+                            COLOR_CHARCOAL,
                             PIPE_WT, PIPE_L, K_IH_BASE_MPa, K_IH_HAZ_MPa,
                             K_TH_STAGE2)
+
+# ICS2-palette sequential map for continuous fields (e.g. model error):
+# teal (conservative, eps<1) -> steel (~exact) -> dark red (unsafe, eps>1).
+ICS2_SEQ = LinearSegmentedColormap.from_list(
+    "ics2_seq", [COLOR_TEAL, COLOR_STEEL, COLOR_RED])
 
 def _ax(ax):
     ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
@@ -166,7 +172,7 @@ def plot_mc_full(mc_result, out="assets/figures/panel_e_mc_full.png"):
     # Model error distribution
     ax=axes[2]
     eps=mc_result['params']['eps_model']
-    ax.hist(eps,bins=40,color=COLOR_PURPLE,alpha=0.7,density=True,edgecolor='none')
+    ax.hist(eps,bins=40,color=COLOR_STEEL,alpha=0.7,density=True,edgecolor='none')
     from scipy.stats import lognorm as _ln
     from src.model_uncertainty import MODEL_ERROR_MEAN, MODEL_ERROR_COV, lognormal_params_from_moments
     mu_ln,sig_ln=lognormal_params_from_moments(MODEL_ERROR_MEAN,MODEL_ERROR_COV)
@@ -299,7 +305,7 @@ def plot_colony_and_coalescence(colony_result, out="assets/figures/panel_g_colon
     eps=colony_result['eps_model']
     a0=colony_result['a0']*1000
     frac=[r['a'][-1]*1000 for r in colony_result['results']]
-    sc3=ax3.scatter(a0,frac,c=eps,cmap='RdYlGn_r',s=20,alpha=0.7,vmin=0.3,vmax=3.0)
+    sc3=ax3.scatter(a0,frac,c=eps,cmap=ICS2_SEQ,s=20,alpha=0.8,vmin=0.3,vmax=3.0)
     fig.colorbar(sc3,ax=ax3,fraction=0.046,pad=0.04).set_label('ε_model [—]',fontsize=9)
     ax3.set_xlabel('Initial a₀ [mm]',fontsize=10); ax3.set_ylabel('Final a(t=20yr) [mm]',fontsize=10)
     ax3.set_title("(g'')  Model Error Spread per Crack\nEpistemic uncertainty visible in scatter",fontsize=10,fontweight='bold',loc='left')
@@ -367,48 +373,57 @@ def plot_bayesian_and_fad(bayesian_result, out="assets/figures/panel_h_bayes_fad
 
 
 def animate_crack_colony(colony_result, out="assets/animations/nnph_scc_crack_colony.gif",
-                          fps: int = 8, n_frames: int = 40):
+                          fps: int = 7, n_frames: int = 60):
     """
-    Animated GIF: colony of NNpHSCC cracks growing along PIPE_L axial range
-    plus simultaneous Colony PoF(t) trajectory.
+    Animated GIF: colony of NNpHSCC cracks growing along the PIPE_L axial range
+    plus the simultaneous Colony PoF(t) trajectory.
 
-    Top axes: scatter of (axial position x, crack depth a), markers grow with time,
-              coloured by zone (base/HAZ). Cracks crossing K_IH highlighted.
-    Bottom axes: running line of Colony PoF(t).
+    Meets the ICS2 QC Gate-2 GIF standard: >=50 interpolated frames, DPI 150, a
+    progress bar, a per-frame time stamp in the suptitle, start/end holds, and an
+    ICS2 brand watermark. Top axes: scatter of (axial position x, crack depth a),
+    markers grow and turn larger as a crack crosses K_IH, coloured by zone
+    (base/HAZ). Bottom axes: running Colony PoF(t).
     """
     os.makedirs(os.path.dirname(out), exist_ok=True)
-    t_years = colony_result['t_years']
-    PoF = colony_result['PoF_t']
+    t_years = np.asarray(colony_result['t_years'], dtype=float)
+    PoF = np.asarray(colony_result['PoF_t'], dtype=float)
     x = colony_result['x']
     zones = colony_result['zone']
     a_traj = np.array([r['a']*1000 for r in colony_result['results']])  # [n_cracks, n_steps]
-    res_t = colony_result['results'][0]['t_yr']
+    res_t = np.asarray(colony_result['results'][0]['t_yr'], dtype=float)
 
-    n_steps_min = min(len(t_years), a_traj.shape[1])
-    n_frames = min(n_frames, n_steps_min)
-    idx_frames = np.linspace(0, n_steps_min - 1, n_frames).astype(int)
+    # Decouple frame count from simulation resolution: interpolate every crack
+    # trajectory and the PoF curve onto a fine, uniform time grid so the GIF is
+    # smooth and always clears the 50-frame minimum.
+    n_real = max(int(n_frames), 50)
+    t_fine = np.linspace(res_t[0], res_t[-1], n_real)
+    a_fine = np.vstack([np.interp(t_fine, res_t, a_traj[i]) for i in range(a_traj.shape[0])])
+    pof_fine = np.interp(t_fine, t_years, PoF) * 100.0
+
+    # Start/end holds for readability: repeat first/last frame so the eye rests
+    # (~430 ms start, ~715 ms end at fps=7) while middle frames stay ~143 ms.
+    hold_start, hold_end = 3, 5
+    order = ([0]*hold_start) + list(range(n_real)) + ([n_real-1]*hold_end)
 
     zone_col = [COLOR_RED if z == 'haz' else COLOR_NAVY for z in zones]
 
-    fig, (ax_top, ax_bot) = plt.subplots(2, 1, figsize=(10, 7),
-                                          constrained_layout=True,
-                                          gridspec_kw={'height_ratios': [2.2, 1]})
+    fig, (ax_top, ax_bot, ax_prog) = plt.subplots(
+        3, 1, figsize=(10, 7.4), constrained_layout=True,
+        gridspec_kw={'height_ratios': [2.2, 1, 0.10]})
     fig.patch.set_facecolor('white')
     _ax(ax_top); _ax(ax_bot)
 
+    a_max = float(a_fine.max())
     ax_top.set_xlim(0, PIPE_L)
-    ax_top.set_ylim(0, max(PIPE_WT*1000*0.6, float(a_traj.max())*1.05))
+    ax_top.set_ylim(0, max(PIPE_WT*1000*0.6, a_max*1.05))
     ax_top.axhline(3.3, color=COLOR_RED, linewidth=0.8, linestyle=':')
     ax_top.set_xlabel('Axial position [m]')
     ax_top.set_ylabel('Crack depth a [mm]')
     ax_top.set_title('NNpHSCC Crack Colony — Spatial Growth',
                       fontsize=11, fontweight='bold', loc='left')
 
-    scat = ax_top.scatter(x, a_traj[:, idx_frames[0]], c=zone_col, s=40,
+    scat = ax_top.scatter(x, a_fine[:, 0], c=zone_col, s=40,
                            alpha=0.85, edgecolor='white', linewidth=0.4)
-    t_text = ax_top.text(0.02, 0.92, f't = {res_t[idx_frames[0]]:.1f} yr',
-                          transform=ax_top.transAxes, fontsize=11, fontweight='bold',
-                          color=COLOR_CHARCOAL)
     p_base = mpatches.Patch(color=COLOR_NAVY, label='Base metal')
     p_haz = mpatches.Patch(color=COLOR_RED, label='HAZ')
     ax_top.legend(handles=[p_base, p_haz,
@@ -416,8 +431,8 @@ def animate_crack_colony(colony_result, out="assets/animations/nnph_scc_crack_co
                                        label='K$_{IH}$ ~3.3 mm')],
                    fontsize=8, frameon=False, loc='upper right')
 
-    ax_bot.set_xlim(0, t_years[-1])
-    ax_bot.set_ylim(0, max(PoF.max()*100*1.1, 5.0))
+    ax_bot.set_xlim(0, t_fine[-1])
+    ax_bot.set_ylim(0, max(pof_fine.max()*1.1, 5.0))
     ax_bot.set_xlabel('Time [yr]')
     ax_bot.set_ylabel('Colony PoF [%]')
     ax_bot.set_title('Colony Probability of Fracture (any crack > K$_{IH}$)',
@@ -425,20 +440,32 @@ def animate_crack_colony(colony_result, out="assets/animations/nnph_scc_crack_co
     pof_line, = ax_bot.plot([], [], color=COLOR_RED, linewidth=1.8)
     pof_dot, = ax_bot.plot([], [], 'o', color=COLOR_RED, markersize=6)
 
-    def update(frame_idx):
-        k = idx_frames[frame_idx]
-        a_now = a_traj[:, k]
-        scat.set_offsets(np.column_stack([x, a_now]))
-        sizes = np.where(a_now >= 3.3, 100, 40)
-        scat.set_sizes(sizes)
-        t_text.set_text(f't = {res_t[k]:.1f} yr')
-        pof_line.set_data(t_years[:frame_idx+1], PoF[:frame_idx+1]*100)
-        pof_dot.set_data([t_years[frame_idx]], [PoF[frame_idx]*100])
-        return scat, t_text, pof_line, pof_dot
+    # Progress bar (thin bottom strip)
+    ax_prog.set_xlim(0, 1); ax_prog.set_ylim(0, 1); ax_prog.axis('off')
+    ax_prog.add_patch(mpatches.Rectangle((0, 0.25), 1.0, 0.5,
+                       facecolor='#e6e6e6', edgecolor='none'))
+    prog_fg = mpatches.Rectangle((0, 0.25), 0.0, 0.5,
+                                  facecolor=COLOR_STEEL, edgecolor='none')
+    ax_prog.add_patch(prog_fg)
 
-    anim = FuncAnimation(fig, update, frames=len(idx_frames),
-                          interval=1000/fps, blit=False)
+    # ICS2 brand watermark, bottom-right
+    fig.text(0.99, 0.012, 'Infinity Growth · Integrity Code Series · Week 10',
+             ha='right', va='bottom', fontsize=7, color=COLOR_CHARCOAL, alpha=0.55)
+
+    def update(display_idx):
+        k = order[display_idx]
+        a_now = a_fine[:, k]
+        scat.set_offsets(np.column_stack([x, a_now]))
+        scat.set_sizes(np.where(a_now >= 3.3, 110, 40))
+        pof_line.set_data(t_fine[:k+1], pof_fine[:k+1])
+        pof_dot.set_data([t_fine[k]], [pof_fine[k]])
+        prog_fg.set_width(k/(n_real-1))
+        fig.suptitle(f'NNpHSCC Crack Colony Evolution   |   t = {t_fine[k]:.1f} yr',
+                     fontsize=12, fontweight='bold', color=COLOR_CHARCOAL)
+        return scat, pof_line, pof_dot, prog_fg
+
+    anim = FuncAnimation(fig, update, frames=len(order), interval=1000/fps, blit=False)
     writer = PillowWriter(fps=fps)
-    anim.save(out, writer=writer, dpi=110)
+    anim.save(out, writer=writer, dpi=150)
     plt.close(fig)
     print(f'Saved: {out}')
