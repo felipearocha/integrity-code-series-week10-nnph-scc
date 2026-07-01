@@ -8,8 +8,8 @@ authors:
     affiliation: "Independent Researcher, Calgary, Canada"
     email: "felipe@olivainternationaltech.com"
     # orcid: "https://orcid.org/0000-0000-0000-0000"  # TODO: replace once ORCID is provisioned
-repository-code: "https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc"
-url: "https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc"
+repository-code: "https://github.com/felipearocha/integrity-code-series-week10-nnph-scc"
+url: "https://github.com/felipearocha/integrity-code-series-week10-nnph-scc"
 abstract: >
   Full-physics simulation of Near-Neutral pH Stress Corrosion Cracking (NNpHSCC) in
   gas transmission pipelines. Implements 15 coupled mechanisms in a single audit-chained
@@ -56,5 +56,5 @@ identifiers:
     value: "10.5281/zenodo.20172242"
     description: "Version DOI (pinned to v1.0.1)"
   - type: url
-    value: "https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/releases/tag/v1.0.1"
+    value: "https://github.com/felipearocha/integrity-code-series-week10-nnph-scc/releases/tag/v1.0.1"
     description: "GitHub release tag v1.0.1"
