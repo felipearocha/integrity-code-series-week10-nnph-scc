@@ -1,10 +1,9 @@
 # Integrity Code Series — Week 10 — NNpHSCC Full-Physics Simulation
 
 [![CI](https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/actions/workflows/ci.yml/badge.svg)](https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/actions/workflows/ci.yml)
-[![Release](https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/actions/workflows/release.yml/badge.svg)](https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/actions/workflows/release.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-215%20passed-brightgreen.svg)](#validation)
+[![Tests: 215 passing](https://img.shields.io/badge/tests-215%20passing-brightgreen.svg)](tests)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20172241.svg)](https://doi.org/10.5281/zenodo.20172241)
 
@@ -21,7 +20,8 @@ Part of an ongoing series of physics-first integrity simulators by Felipe Rocha:
 | Week 7 | [integrity_code_series_week7_h2_lferw](https://github.com/felipearocha/integrity_code_series_week7_h2_lferw) | LF-ERW H2 conversion (B31.12 + NACE TM0316) |
 | Week 8 | [integrity-code-series-week8-creep-fatigue-heater](https://github.com/felipearocha/integrity-code-series-week8-creep-fatigue-heater) | Creep-fatigue 9Cr-1Mo (Norton/Omega + Coffin-Manson) |
 | Week 9 | [integrity-code-series-week9-cui](https://github.com/felipearocha/integrity-code-series-week9-cui) | CUI thermohygro-electrochemical (3 PDEs, Strang) |
-| Week 10 | [integrity-code-series-week-10_nnph_scc](https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc) | NNpHSCC full-physics (Chen-Sutherby-Xing + BS 7910) |
+| **Week 10** | **[integrity-code-series-week-10_nnph_scc](https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc)** | **NNpHSCC full-physics (Chen-Sutherby-Xing + BS 7910) — this repo** |
+| Week 11 | [integrity-code-series-week11-erosion-corrosion-multiphase](https://github.com/felipearocha/integrity-code-series-week11-erosion-corrosion-multiphase) | Erosion-corrosion multiphase (NORSOK M-506 + DNV-RP-O501 + G119 + API 579) |
 | Bonus | [Vibration-Accelerated-Corrosion-Coupled-Mechano-Electrochemical-Simulation](https://github.com/felipearocha/Vibration-Accelerated-Corrosion-Coupled-Mechano-Electrochemical-Simulation) | Vibration-accelerated corrosion (SDOF + Butler-Volmer + Archard) |
 | Bonus | [synthetic-integrity-digital-twin-piml](https://github.com/felipearocha/synthetic-integrity-digital-twin-piml) | Physics-informed neural-network surrogate |
 | Bonus | [integrity-data-foundation](https://github.com/felipearocha/integrity-data-foundation) | Engineering data validation baseline |
@@ -42,7 +42,7 @@ python -m validation.benchmarks           # textbook constants
 python run_all.py
 ```
 
-Browse `equations.html` in any modern browser for the full LaTeX equations reference.
+Browse [`docs/equations.html`](docs/equations.html) in any modern browser for the full LaTeX equations reference.
 
 ## Problem Statement
 
@@ -63,6 +63,9 @@ uncertainty as a sampled variable — not a footnote.
 ---
 
 ## Governing Equations
+
+Every constant is tagged to its source standard or paper. Full rendered (MathJax)
+reference: **[docs/equations.html](docs/equations.html)** — open in any browser.
 
 ### PDE 1 — Laplace (soil electrochemistry)
 ∇·(σ_soil·∇φ) = 0 in soil; Butler-Volmer BC at coating holiday
@@ -154,7 +157,7 @@ integrity-code-series-week-10_nnph_scc/
 ├── pyproject.toml
 ├── README.md
 ├── conftest.py
-├── equations.html                LaTeX equations reference
+├── docs/equations.html           LaTeX equations reference (MathJax)
 ├── src/
 │   ├── constants.py              All parameters with [SOURCE] tags
 │   ├── hydrogen_diffusion.py     Oriani-Fick PDE + C_H_surface_from_potential
@@ -177,7 +180,7 @@ integrity-code-series-week-10_nnph_scc/
 ├── visualization/
 │   ├── plot_all.py               6 core panels + colony GIF generator
 │   └── plot_advanced.py          3 extended panels (CP, H2, inspection optimizer)
-├── tests/test_week10.py          215 tests
+├── tests/                        215 tests (test_week10.py + test_physics_correctness.py)
 ├── assets/figures/               9 panels (300 DPI)
 ├── assets/animations/            Crack colony GIF
 └── assets/audit_chain.json
@@ -234,6 +237,34 @@ SHA-256 hash-chain audit for all runs. Sensor integrity checks. GBR surrogate OO
 
 ---
 
+## Anti-Hallucination Note
+
+Every equation and constant carries an explicit `[SOURCE: ...]` or `[ASSUMED]` tag,
+graded by tier:
+
+- **T1 (standard / peer-reviewed paper)** — read directly from a controlled source:
+  Chen & Sutherby 2007 (combined-parameter crack growth, n = 2.0), Sun, Zhou & Kang
+  2021 JIPR (model error LogNormal mean 1.06, COV = 61.2% from 39 CanmetMATERIALS
+  tests; n_HE = 0.88), Zhao et al. 2017 (>95% sub-mm dormancy), Turnbull 1993
+  (crack-tip acidification), Newman & Raju 1981 (semi-elliptical SIF), BS 7910:2019
+  (Annex Q residual-stress SIF, Cl. 7.3 coalescence), ASME B31G / API 579-1 Level 2
+  (failure limit state), Straub 2004 (Bayesian inspection update).
+- **T2 (derived)** — quantities computed from T1 inputs (e.g. `D_eff` from `D_H(T)`
+  and trap density, `pH_tip` propagated into `C_H_corrected`, post-inspection `a0`
+  from the Weibull POD by rejection sampling).
+- **T3 (practitioner / assumed)** — modelling choices that no standard fixes, each
+  flagged `[ASSUMED]` in the README and source: the underload interaction factor
+  `F_INT = 10` (tertiary web source, not the Chen 2007 journal), the ILI POD
+  parameters `a_90 = 4 mm`, `k = 2`, the HAZ threshold `K_IH = 17.5 MPa√m` (70% of
+  base), and the base growth calibration `A_CF_BASE = 4.0×10^-14` (fitted to CEPA
+  field rate 0.3 mm/yr at a = 2 mm).
+
+The tiers are applied honestly: where a coefficient is an assumption rather than a
+codified value it is tagged `[ASSUMED]` (T3) and listed in the "Key [ASSUMED]
+Parameters" table above, not presented as a standard constant.
+
+---
+
 ## How to Cite
 
 If this software contributes to your work, please cite both the software (this repository) and the underlying methods it implements.
@@ -268,4 +299,10 @@ A machine-readable citation file is also available in [`CITATION.cff`](CITATION.
 
 ---
 
-Research tool only. Not for FFS decisions without site-specific calibration and independent review.
+## Disclaimer
+
+Research tool only. Not for design, fitness-for-service, or safety-critical decisions without site-specific calibration and independent PE review.
+
+## License
+
+MIT — Felipe Rocha. See [LICENSE](LICENSE).

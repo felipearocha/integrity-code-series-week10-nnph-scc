@@ -37,7 +37,7 @@ When you add new physics, please include:
 - A `[SOURCE]` tag with author + year (and DOI when available).
 - At least one analytical benchmark in `validation/benchmarks.py`.
 - At least three unit tests covering nominal, boundary, and degenerate input.
-- An entry in `equations.html` if the equation deserves visible documentation.
+- An entry in `docs/equations.html` if the equation deserves visible documentation.
 
 ## Reporting bugs
 

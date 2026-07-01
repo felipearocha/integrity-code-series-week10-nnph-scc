@@ -23,7 +23,7 @@
 - [ ] `ruff check .` is clean
 - [ ] New `[SOURCE]` or `[ASSUMED]` tags added where applicable
 - [ ] Updated `CHANGELOG.md` (Unreleased section)
-- [ ] Updated `equations.html` if a new governing equation was added
+- [ ] Updated `docs/equations.html` if a new governing equation was added
 
 ## Notes for the reviewer
 
