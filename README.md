@@ -1,6 +1,6 @@
 # Integrity Code Series — Week 10 — NNpHSCC Full-Physics Simulation
 
-[![CI](https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/actions/workflows/ci.yml/badge.svg)](https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/actions/workflows/ci.yml)
+[![CI](https://github.com/felipearocha/integrity-code-series-week10-nnph-scc/actions/workflows/ci.yml/badge.svg)](https://github.com/felipearocha/integrity-code-series-week10-nnph-scc/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![Tests: 215 passing](https://img.shields.io/badge/tests-215%20passing-brightgreen.svg)](tests)
@@ -15,12 +15,12 @@ Part of an ongoing series of physics-first integrity simulators by Felipe Rocha:
 
 | # | Repo | Domain |
 |---|---|---|
-| Week 3 | [Integrity-code-series-3](https://github.com/felipearocha/Integrity-code-series-3) | F1 lap simulation (six coupled ODEs) |
-| Week 6 | [Integrity-code-series-week6-smartphone-galvanic](https://github.com/felipearocha/Integrity-code-series-week6-smartphone-galvanic) | Smartphone galvanic corrosion (Laplace + Butler-Volmer) |
-| Week 7 | [integrity_code_series_week7_h2_lferw](https://github.com/felipearocha/integrity_code_series_week7_h2_lferw) | LF-ERW H2 conversion (B31.12 + NACE TM0316) |
+| Week 3 | [integrity-code-series-week3-f1-lap-simulation](https://github.com/felipearocha/integrity-code-series-week3-f1-lap-simulation) | F1 lap simulation (six coupled ODEs) |
+| Week 6 | [integrity-code-series-week6-smartphone-galvanic](https://github.com/felipearocha/integrity-code-series-week6-smartphone-galvanic) | Smartphone galvanic corrosion (Laplace + Butler-Volmer) |
+| Week 7 | [integrity-code-series-week7-h2-lferw](https://github.com/felipearocha/integrity-code-series-week7-h2-lferw) | LF-ERW H2 conversion (B31.12 + NACE TM0316) |
 | Week 8 | [integrity-code-series-week8-creep-fatigue-heater](https://github.com/felipearocha/integrity-code-series-week8-creep-fatigue-heater) | Creep-fatigue 9Cr-1Mo (Norton/Omega + Coffin-Manson) |
 | Week 9 | [integrity-code-series-week9-cui](https://github.com/felipearocha/integrity-code-series-week9-cui) | CUI thermohygro-electrochemical (3 PDEs, Strang) |
-| **Week 10** | **[integrity-code-series-week-10_nnph_scc](https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc)** | **NNpHSCC full-physics (Chen-Sutherby-Xing + BS 7910) — this repo** |
+| **Week 10** | **[integrity-code-series-week10-nnph-scc](https://github.com/felipearocha/integrity-code-series-week10-nnph-scc)** | **NNpHSCC full-physics (Chen-Sutherby-Xing + BS 7910) — this repo** |
 | Week 11 | [integrity-code-series-week11-erosion-corrosion-multiphase](https://github.com/felipearocha/integrity-code-series-week11-erosion-corrosion-multiphase) | Erosion-corrosion multiphase (NORSOK M-506 + DNV-RP-O501 + G119 + API 579) |
 | Bonus | [Vibration-Accelerated-Corrosion-Coupled-Mechano-Electrochemical-Simulation](https://github.com/felipearocha/Vibration-Accelerated-Corrosion-Coupled-Mechano-Electrochemical-Simulation) | Vibration-accelerated corrosion (SDOF + Butler-Volmer + Archard) |
 | Bonus | [synthetic-integrity-digital-twin-piml](https://github.com/felipearocha/synthetic-integrity-digital-twin-piml) | Physics-informed neural-network surrogate |
@@ -30,8 +30,8 @@ Part of an ongoing series of physics-first integrity simulators by Felipe Rocha:
 
 ```bash
 # Clone and install
-git clone https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc.git
-cd integrity-code-series-week-10_nnph_scc
+git clone https://github.com/felipearocha/integrity-code-series-week10-nnph-scc.git
+cd integrity-code-series-week10-nnph-scc
 pip install -e .[dev]
 
 # Validate
@@ -64,7 +64,7 @@ uncertainty as a sampled variable — not a footnote.
 
 ## Governing Equations
 
-[**view the full rendered reference**](https://htmlpreview.github.io/?https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/blob/main/docs/equations.html)
+[**view the full rendered reference**](https://htmlpreview.github.io/?https://github.com/felipearocha/integrity-code-series-week10-nnph-scc/blob/main/docs/equations.html)
 
 Every constant is tagged to its source standard or paper. The headline equations below
 render natively on GitHub; the complete derivation set (12 sections) lives in
@@ -114,7 +114,7 @@ $$ K_{IH}(x_{\text{H}_2},x_{\text{CO}_2}) \;=\; K_{IH,0}\,\bigl(1 - \alpha_{\tex
 ## Repository Structure
 
 ```
-integrity-code-series-week-10_nnph_scc/
+integrity-code-series-week10-nnph-scc/
 ├── run_all.py
 ├── requirements.txt
 ├── pyproject.toml

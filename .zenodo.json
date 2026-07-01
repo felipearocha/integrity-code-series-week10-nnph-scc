@@ -34,7 +34,7 @@
   "related_identifiers": [
     {
       "relation": "isSupplementTo",
-      "identifier": "https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc",
+      "identifier": "https://github.com/felipearocha/integrity-code-series-week10-nnph-scc",
       "scheme": "url",
       "resource_type": "software"
     }
