@@ -85,7 +85,7 @@ point estimates. Researchers can use the modular `src/` package to substitute
 alternative crack-growth laws, hydrogen-diffusion models or POD curves and
 compare the integrated outcome on identical Monte Carlo seeds. Graduate students
 in corrosion and fracture mechanics can use the LaTeX equation reference in
-`equations.html`, the analytical benchmarks in `validation/benchmarks.py`, and
+`docs/equations.html`, the analytical benchmarks in `validation/benchmarks.py`, and
 the 215 unit tests as a worked example of how the standards (BS 7910:2019,
 API 579-1, API 571, NACE TM0316) compose into an end-to-end integrity model.
 
