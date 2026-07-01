@@ -64,87 +64,50 @@ uncertainty as a sampled variable — not a footnote.
 
 ## Governing Equations
 
-Every constant is tagged to its source standard or paper. Full rendered (MathJax)
-reference: **[docs/equations.html](docs/equations.html)** — open in any browser.
+[**view the full rendered reference**](https://htmlpreview.github.io/?https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/blob/main/docs/equations.html)
 
-### PDE 1 — Laplace (soil electrochemistry)
-∇·(σ_soil·∇φ) = 0 in soil; Butler-Volmer BC at coating holiday
+Every constant is tagged to its source standard or paper. The headline equations below
+render natively on GitHub; the complete derivation set (12 sections) lives in
+**[docs/equations.html](docs/equations.html)**.
 
-### PDE 2 — Oriani-Fick (H diffusion in steel wall)
-∂C_L/∂t = D_eff·∂²C_L/∂r²;  D_eff = D_H(T)/(1+K_trap_eff)
-
-### PDE 3 — Chen-Sutherby-Xing crack growth (most accurate available model)
+### Chen-Sutherby-Xing crack growth (most accurate available model)
 **[SOURCE: Chen & Sutherby 2007; Xing et al. via Sun et al. 2021]**
 
-    da/dN = A_CF × (K_max × ΔK² × f_eff^(-0.1))^n × HE_factor
+$$ \frac{da}{dN} \;=\; A_{\text{CF}}\,\bigl(K_{\max}\,\Delta K^{\,2}\,f_{\text{eff}}^{-0.1}\bigr)^{n}\;\Phi_{\text{HE}}(C_H) $$
 
-    HE_factor = (C_H_bulk / C_H_ref)^n_HE        Xing HEDE multiplier
-    f_eff = max(f, f_crit = 10^-3 Hz)            frequency saturation
-    n = 2.0   [SOURCE: Chen & Sutherby 2007]
-    n_HE = 0.88 [SOURCE: Sun et al. 2021, Xing model]
+HEDE (Xing) multiplier, with $n_{\text{HE}} = 0.88$ and frequency saturation $f_{\text{eff}} = \max(f, f_{\text{crit}})$:
 
-### Variable Amplitude Loading (Type I underload)
-**[SOURCE: Chen literature via ScienceDirect Topics Ch.30 — underload VA enhancement]**
+$$ \Phi_{\text{HE}}(C_H) \;=\; \Bigl(\tfrac{C_H^{\,\text{bulk}}}{C_H^{\,\text{ref}}}\Bigr)^{n_{\text{HE}}}, \qquad n_{\text{HE}} = 0.88 $$
 
-    da/dt = f_major × da/dN_major + f_minor × da/dN_minor × F_INT
+### Oriani-Fick — hydrogen diffusion in the steel wall (with trapping)
+**[SOURCE: Kiuchi & McLellan 1983; Turnbull 1996; San Marchi 2012]**
 
-    F_INT = 10  [ASSUMED: 10x underload-minor interaction — tertiary web
-                 source (ScienceDirect Topics Ch.30), not the Chen 2007 journal]
+$$ \frac{\partial C_L}{\partial t} \;=\; D_{\text{eff}}(T,\sigma_h)\,\frac{\partial^{2} C_L}{\partial r^{2}} + \frac{D_{\text{eff}}\,V_H}{R\,T}\,\frac{\partial}{\partial r}\!\Bigl(C_L\,\frac{\partial \sigma_h}{\partial r}\Bigr) $$
 
-### Crack Dormancy Criterion (Stage I → Stage II)
-**[SOURCE: Zhao et al. 2017 — >95% cracks remain dormant below 1mm]**
-
-    Active (Stage II) iff  K_max ≥ K_IH  AND  C_H ≥ C_H_crit ;  dormant otherwise
-
-Because a base-metal flaw only reaches K_IH = 25 MPa√m near ~5 mm depth, the whole
-sub-millimetre population is below threshold and dormant — the model reproduces
-Zhao's ~95%-dormant result (a sub-mm colony returns ~95–100% dormant).
-
-### Failure Limit State
-**[SOURCE: ASME B31G surface-flaw flow-stress criterion; API 579-1 Level 2]**
-
-    Critical if  a ≥ 0.80·t (leak)  OR  net-section collapse (Folias M_T)  OR  K ≥ K_IC
-
-K_IH is the onset threshold for environmental cracking, **not** a rupture
-criterion; a coalesced (long) flaw fails by collapse at a shallower depth.
-
-### 3D Semi-Elliptical Crack (two coupled EDOs)
+### Stress Intensity Factor — Newman-Raju surface crack
 **[SOURCE: Newman & Raju 1981]**
 
-    da/dt = v(K_A, ΔK_A)    (deepest point)
-    dc/dt = v(K_C, ΔK_C)    (surface point)
+$$ K_I^{\,(A)} \;=\; \sigma_h\,\sqrt{\frac{\pi\,a}{Q}}\;F\!\Bigl(\tfrac{a}{t},\tfrac{a}{c},\,\tfrac{\pi}{2}\Bigr) $$
 
-### Crack Tip Acidification
+### Crack-tip acidification (Turnbull)
 **[SOURCE: Turnbull 1993]**
 
-    pH_tip = pH_bulk − 0.6×log10(c/a) − 0.3×v_diss + buffering_correction
-    C_H_corrected = C_H_0 × 10^(0.3 × Δ_pH)
+$$ \text{pH}_{\text{tip}} \;=\; \text{pH}_{\text{bulk}} \;-\; 0.6\,\log_{10}\!\Bigl(\tfrac{c}{a}\Bigr) \;-\; 0.3\,v_{\text{diss}} \;+\; \text{buffer correction} $$
 
-### Residual Stress SIF
-**[SOURCE: BS 7910:2019 Annex Q]**
-
-    K_I_res = sqrt(π·a) × (σ_res_m × Y_m + σ_res_b × Y_b)
-
-### ILI POD (Weibull)
-**[SOURCE: PHMSA TVC; general EMAT performance]**
-
-    POD(a) = 1 − exp(−(a/a_90)^k)    a_90 = 4mm, k = 2 [ASSUMED]
-
-### Model Structural Uncertainty
+### Model structural uncertainty (headline v2 finding)
 **[SOURCE: Sun, Zhou & Kang 2021 JIPR — 39 full-scale CanmetMATERIALS tests]**
 
-    da/dt_real = da/dt_model × ε_model
-    ε_model ~ LogNormal(mean=1.06, COV=61.2%)
+$$ \left(\tfrac{da}{dt}\right)_{\!\text{real}} \;=\; \left(\tfrac{da}{dt}\right)_{\!\text{model}}\!\!\cdot\,\varepsilon_{\text{model}},\qquad \varepsilon_{\text{model}} \sim \operatorname{LogNormal}(\mu=1.06,\;\mathrm{COV}=61.2\%) $$
 
-### BS 7910 Coalescence Rule
-**[SOURCE: BS 7910:2019 Clause 7.3]**
+### API 579-1 Level 2 FAD curve
+**[SOURCE: API 579-1/ASME FFS-1 Level 2]**
 
-    Merge if: gap between cracks s < min(a_i, a_j)
+$$ K_r(L_r) \;=\; \bigl(1 + \tfrac{1}{2} L_r^{2}\bigr)^{-1/2}\, \bigl(\,0.3 + 0.7\,e^{-0.65\,L_r^{6}}\bigr) $$
 
-### Bayesian Posterior Update (particle filter)
-**[SOURCE: Straub 2004 — inspection-based reliability]**
+### H₂ blending — K_IH degradation
+**[SOURCE: Cui et al. 2024]**
 
-    p(θ | a_obs) ∝ p(a_obs | θ) × p(θ)
+$$ K_{IH}(x_{\text{H}_2},x_{\text{CO}_2}) \;=\; K_{IH,0}\,\bigl(1 - \alpha_{\text{H}}\,x_{\text{H}_2}^{\,m}\bigr)\,\bigl(1 + \alpha_{\text{CO}_2}\,x_{\text{CO}_2}\bigr)^{-1} $$
 
 ---
 
