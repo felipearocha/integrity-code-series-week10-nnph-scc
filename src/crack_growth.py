@@ -14,9 +14,9 @@ Implements:
 """
 import numpy as np
 from src.constants import (
-    PIPE_OD, PIPE_WT, P_OP_BAR, STEEL_SMYS,
-    K_TH_STAGE2, K_IH_BASE_MPa,
-    A_DORMANCY_MM, C_H_CRIT_STAGEII,
+    PIPE_OD, PIPE_WT, P_OP_BAR, STEEL_SMYS, STEEL_UTS,
+    K_IH_BASE_MPa, K_IC_AIR, A_CRIT_FRAC,
+    C_H_CRIT_STAGEII,
     SIGMA_RES_M_FRAC, SIGMA_RES_B_FRAC,
 )
 from src.pressure_spectrum import (
@@ -146,6 +146,48 @@ def K_I_total(a_m: float, c_m: float, P_bar: float = P_OP_BAR,
     return float(np.clip(K_applied + K_res, 0.0, 1e4))
 
 
+# ── Limit state (leak / net-section collapse / brittle) ───────────────────
+
+def folias_factor(c_m: float, D: float = PIPE_OD, t: float = PIPE_WT) -> float:
+    """
+    Folias bulging factor M_T for an axial through-length 2c in a pressurised
+    shell [SOURCE: ASME B31G-2012 / modified log-secant]. A longer flaw has a
+    larger M_T, i.e. a higher local (bulging) stress, so it collapses at a
+    shallower depth — the mechanism that makes crack-colony coalescence matter.
+    """
+    L = 2.0 * c_m
+    lam = L * L / (D * t)
+    if lam <= 50.0:
+        return float(np.sqrt(max(1.0 + 0.6275 * lam - 0.003375 * lam * lam, 1.0)))
+    return float(0.032 * lam + 3.3)
+
+
+def flaw_is_critical(a_m: float, c_m: float,
+                      P_bar: float = P_OP_BAR,
+                      D: float = PIPE_OD, t: float = PIPE_WT,
+                      in_HAZ: bool = False) -> bool:
+    """
+    Limit-state check for an axial semi-elliptical surface flaw. Critical if ANY:
+      (1) depth reaches A_CRIT_FRAC of the wall — leak / ligament exhaustion;
+      (2) net-section plastic collapse via the Folias factor — a long *coalesced*
+          flaw ruptures at a shallower depth than a short one;
+      (3) K_I reaches the material fracture toughness K_IC — brittle backstop.
+    K_IH is deliberately NOT used here: it is the onset threshold for
+    environmental cracking, not a rupture criterion.
+    [SOURCE: ASME B31G surface-flaw flow-stress criterion; API 579-1 Level 2.]
+    """
+    if a_m >= A_CRIT_FRAC * t:
+        return True
+    if K_I_total(a_m, c_m, P_bar, in_HAZ=in_HAZ) >= K_IC_AIR:
+        return True
+    M_T = folias_factor(c_m, D, t)
+    sigma_flow = 0.5 * (STEEL_SMYS + STEEL_UTS) * 1e-6      # flow stress [MPa]
+    sigma_h = (P_bar * 0.1) * D / (2.0 * t)                 # hoop stress [MPa]
+    a_t = min(a_m / t, 0.999)
+    sigma_fail = sigma_flow * (1.0 - a_t) / (1.0 - a_t / M_T)
+    return sigma_h >= sigma_fail
+
+
 # ── Crack dormancy model ──────────────────────────────────────────────────
 
 def crack_is_dormant(a_m: float, c_m: float, C_H_tip: float,
@@ -154,26 +196,31 @@ def crack_is_dormant(a_m: float, c_m: float, C_H_tip: float,
                       zone: str = 'base') -> bool:
     """
     Stage I → Stage II transition criterion.
-    [SOURCE: Zhao et al. 2017 — dormancy at < 1mm; Stage II requires both:
-       (1) ΔK > ΔK_th_Stage2  AND
-       (2) C_H_bulk > C_H_crit_StageII]
-    [SOURCE: Shirazi et al. 2024 — growth ceases ~1mm due to dissolution rate reduction]
+
+    A crack is in active Stage-II growth only when BOTH:
+       (1) K_max >= K_IH   — the environmental-cracking stress-intensity threshold
+       (2) C_H_tip >= C_H_crit_StageII — enough hydrogen to sustain HEDE
+    otherwise it is dormant (Stage I, slow dissolution-controlled creep).
+
+    [SOURCE: Zhao et al. 2017 — >95% of NNpHSCC cracks stay sub-mm and never reach
+       Stage II. That emerges here from K_max < K_IH: at operating hoop stress a
+       base-metal flaw only reaches K_IH=25 MPa√m near ~5 mm depth, so the whole
+       sub-mm population is below threshold and dormant.]
+    [SOURCE: Shirazi et al. 2024 — growth ceases while K stays below the EAC threshold.]
+
+    NOTE: the previous release gated on ΔK >= K_TH_STAGE2 (crossed at ~0.28 mm),
+    which flagged nearly every sub-mm crack as active and produced 4% dormant
+    instead of Zhao's ~95%.
 
     Returns True if crack is dormant (not growing in Stage II).
     """
-    a_mm = a_m * 1000
-    # Stage I dormancy depth criterion
-    if a_mm < A_DORMANCY_MM * 0.1:          # < 0.1mm: certainly dormant
-        return True
-
     K_max = K_I_total(a_m, c_m, P_bar, in_HAZ=(zone == 'haz'))
-    dK_val = delta_K(a_m, c_m, P_bar, 0.55)
 
-    # Both conditions must be met to escape dormancy
-    dk_active = dK_val >= K_TH_STAGE2
+    # Both conditions must be met to escape dormancy into Stage II.
+    k_active  = K_max >= K_IH
     ch_active = C_H_tip >= C_H_CRIT_STAGEII
 
-    return not (dk_active and ch_active)
+    return not (k_active and ch_active)
 
 
 # ── 3D crack shape evolution ──────────────────────────────────────────────
@@ -185,6 +232,7 @@ def crack_shape_evolution(a0_m: float, c0_m: float,
                            microstructure_factor: float = 1.0,
                            model_error: float = 1.0,
                            dormancy_factor: float = 1.0,
+                           in_haz: bool = False,
                            dt_s: float = 30*86400) -> tuple:
     """
     Advance (a, c) by dt_s seconds using coupled EDOs, with the SAME
@@ -202,7 +250,8 @@ def crack_shape_evolution(a0_m: float, c0_m: float,
     """
     da_dt_A = da_dt_variable_amplitude(
         a0_m, spectrum, C_H_bulk,
-        K_I_func=lambda am, P: K_I_deeppoint(am, c0_m, P),
+        K_I_func=lambda am, P: K_I_deeppoint(am, c0_m, P)
+                  + (K_I_residual(am) if in_haz else 0.0),
         delta_K_func=lambda am, P, R: delta_K(am, c0_m, P, R),
         microstructure_factor=microstructure_factor, model_error=model_error,
         spectrum_type=spectrum.type)
@@ -258,18 +307,25 @@ def integrate_full(a0_m: float, c0_m: float,
         ac_arr[k]  = a / max(c, 1e-6)
         dormant_arr[k] = crack_is_dormant(a, c, C_H_tip, P_bar, K_IH, zone)
 
-        # Fracture: once K_I reaches K_IH the crack goes unstable (rupture);
-        # sub-critical NNpHSCC growth stops and the geometry is frozen, so the
-        # post-fracture rate explosion never pollutes the trajectory.
-        if KI_arr[k] >= K_IH:
+        # Failure limit state: leak (80% wall), net-section collapse (Folias, so
+        # a long coalesced flaw fails shallower), or brittle K_IC. K_IH is the
+        # *onset* threshold for environmental cracking — NOT a rupture criterion —
+        # so it must not freeze growth here (using it inverted the regime and
+        # froze active flaws, e.g. the HAZ baseline, at t=0).
+        if flaw_is_critical(a, c, P_bar, in_HAZ=(zone == 'haz')):
             if not fractured:
                 fracture_time_yr = t_s / SEC_PER_YR
                 fractured = True
             v_arr[k] = 0.0
         else:
+            in_haz = (zone == 'haz')
             v_arr[k] = da_dt_variable_amplitude(
                 a, spectrum, C_H_bulk,
-                K_I_func=lambda am, P: K_I_deeppoint(am, c, P),
+                # Residual stress raises the mean SIF (K_max), so in the HAZ it
+                # accelerates growth — consistent with how it enters K_I_total.
+                # ΔK stays residual-free (the weld residual field is static).
+                K_I_func=lambda am, P: K_I_deeppoint(am, c, P)
+                          + (K_I_residual(am) if in_haz else 0.0),
                 delta_K_func=lambda am, P, R: delta_K(am, c, P, R),
                 microstructure_factor=f_micro,
                 model_error=model_error,
@@ -284,6 +340,7 @@ def integrate_full(a0_m: float, c0_m: float,
                                           microstructure_factor=f_micro,
                                           model_error=model_error,
                                           dormancy_factor=dormancy_factor,
+                                          in_haz=(zone == 'haz'),
                                           dt_s=dt_s)
 
     return {

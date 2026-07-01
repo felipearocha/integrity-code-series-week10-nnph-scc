@@ -322,16 +322,23 @@ def plot_bayesian_and_fad(bayesian_result, out="assets/figures/panel_h_bayes_fad
     fig.patch.set_facecolor("white")
     for ax in axes: _ax(ax)
 
-    # Bayesian update
+    # Bayesian update — weighted-histogram posterior densities (a proper density,
+    # not a line over unsorted particles). particle_history/weight_history are
+    # kept aligned across resampling by multi_inspection_update.
     ax=axes[0]
-    ax.plot(bayesian_result['particles'], bayesian_result['weight_history'][0]*len(bayesian_result['particles']),
-            color=COLOR_STEEL,alpha=0.6,linewidth=1,label='Prior (uniform)')
-    for i,wh in enumerate(bayesian_result['weight_history'][1:],1):
-        col=[COLOR_TEAL,COLOR_RED][min(i-1,1)]
-        ax.plot(bayesian_result['particles'],wh*len(bayesian_result['particles']),
-                color=col,alpha=0.7,linewidth=1,label=f'After inspection {i}')
+    wh_all = bayesian_result['weight_history']
+    ph = bayesian_result.get('particle_history',
+                             [bayesian_result['particles']] * len(wh_all))
+    all_p = np.concatenate([np.asarray(p) for p in ph])
+    bins = np.linspace(float(all_p.min()), float(all_p.max()), 28)
+    centers = 0.5*(bins[:-1]+bins[1:])
+    cols = [COLOR_STEEL, COLOR_TEAL, COLOR_RED]
+    for i,(pp,ww) in enumerate(zip(ph, wh_all)):
+        dens,_ = np.histogram(np.asarray(pp), bins=bins, weights=np.asarray(ww), density=True)
+        lbl = 'Prior' if i==0 else f'After inspection {i}'
+        ax.plot(centers, dens, color=cols[min(i,2)], alpha=0.8, linewidth=1.5, label=lbl)
     ax.set_xlabel('Initial crack depth a₀ [mm]',fontsize=10)
-    ax.set_ylabel('Normalised weight [—]',fontsize=10)
+    ax.set_ylabel('Posterior density [mm⁻¹]',fontsize=10)
     ax.set_title('(h)  Bayesian Posterior Update\n[SOURCE: Straub 2004 — particle filter ILI]',fontsize=10,fontweight='bold',loc='left')
     ax.legend(fontsize=8.5,frameon=False)
 

@@ -5,6 +5,10 @@ Run: python run_all.py
 """
 import os, sys, time, numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:                                    # emit UTF-8 so the script does not crash
+    sys.stdout.reconfigure(encoding="utf-8")   # on a legacy Windows cp1252 console
+except Exception:
+    pass
 os.makedirs("assets/figures", exist_ok=True); os.makedirs("assets/animations", exist_ok=True)
 
 print("="*72)
@@ -30,10 +34,14 @@ C_H = C_H_surface_from_potential(E_CP_V, SOIL_PH)
 sp = PressureSpectrum("Type_I")
 bl_base = integrate_full(0.5e-3, 3e-3, sp, lambda t: C_H, zone='base', t_end_yr=20, n_steps=80)
 bl_haz  = integrate_full(1.5e-3, 6e-3, sp, lambda t: C_H, zone='haz', model_error=1.3, t_end_yr=20, n_steps=80)
-print(f"  Base: a0=0.5mm → a(20yr)={bl_base['a'][-1]*1000:.3f}mm  (K_IH={K_IH_BASE_MPa})")
-print(f"  HAZ:  a0=1.5mm → a(20yr)={bl_haz['a'][-1]*1000:.3f}mm   (K_IH={K_IH_HAZ_MPa})")
+print(f"  Base: a0=0.5mm -> a(20yr)={bl_base['a'][-1]*1000:.3f}mm  (dormant, no failure; K_IH={K_IH_BASE_MPa})")
+_haz_ft = bl_haz['fracture_time_yr']
+_haz_state = (f"active -> wall penetration at t={_haz_ft:.2f}yr"
+              if np.isfinite(_haz_ft) else f"a(20yr)={bl_haz['a'][-1]*1000:.3f}mm (no failure)")
+print(f"  HAZ:  a0=1.5mm {_haz_state}  (K_IH={K_IH_HAZ_MPa})")
 assert bl_base['a'][0] == 0.5e-3, "Initial crack must equal a0"
 assert np.all(np.diff(bl_base['a']) >= -1e-15), "Crack must be monotone"
+assert np.all(np.diff(bl_haz['a']) >= -1e-15), "HAZ crack must be monotone"
 
 # [3] MC N=10,000
 print("\n[3/10] Monte Carlo — N=10,000 (8 params, post-ILI)...")
@@ -64,10 +72,12 @@ print("\n[6/10] Bayesian posterior update (particle filter)...")
 from src.bayesian_update import multi_inspection_update
 from src.pod_ilicurve import sample_a0_post_inspection
 particles = sample_a0_post_inspection(1000, seed=42) * 1000
-inspection_log = [{'t_yr':5.0,'a_obs_mm':0.8,'detected':True},
-                   {'t_yr':10.0,'a_obs_mm':0.0,'detected':False}]
-bayes = multi_inspection_update(particles, inspection_log, da_dt_mm_yr=0.05)
-print(f"  Prior P50={np.percentile(particles,50):.3f}mm → Posterior P50={bayes['posterior']['P50']:.3f}mm")
+# Two re-ILI detections in the tail of the prior, so the posterior genuinely
+# shifts toward the larger, faster-growing flaws (informative update).
+inspection_log = [{'t_yr':5.0,'a_obs_mm':2.2,'detected':True},
+                   {'t_yr':10.0,'a_obs_mm':3.2,'detected':True}]
+bayes = multi_inspection_update(particles, inspection_log, da_dt_mm_yr=0.15)
+print(f"  Prior P50={np.percentile(particles,50):.3f}mm -> Posterior P50={bayes['posterior']['P50']:.3f}mm")
 print(f"  ESS history: {[round(e,0) for e in bayes['ess_history']]}")
 
 # [7] Model uncertainty report

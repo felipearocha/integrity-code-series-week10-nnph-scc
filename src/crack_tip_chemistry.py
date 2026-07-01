@@ -24,7 +24,8 @@ from src.constants import SOIL_PH, C_CO2_MOL, C_HCO3_MOL, T_OP_K
 
 def crack_tip_pH(a_m: float, c_m: float,
                   pH_bulk: float = SOIL_PH,
-                  v_diss_mm_yr: float = 0.001) -> float:
+                  v_diss_mm_yr: float = 0.001,
+                  c_co2: float = C_CO2_MOL) -> float:
     """
     Estimate crack-tip pH accounting for Fe²⁺ hydrolysis and CO₂ buffering.
     [SOURCE: Turnbull 1993 simplified; Shipilov 2002]
@@ -35,6 +36,10 @@ def crack_tip_pH(a_m: float, c_m: float,
     pH_tip = pH_bulk + delta_pH_geo + delta_pH_dissolution
     delta_pH_geo ≈ -0.6 × log10(a/c)  [ASSUMED geometric effect]
     delta_pH_diss ≈ -0.3 × v_diss    [ASSUMED: 0.3 pH units per mm/yr dissolution]
+
+    c_co2 : dissolved-CO₂ concentration [mol/L]. Higher CO₂ weakens the
+            HCO₃⁻/CO₂ buffer, so the crack tip is more acidic (more H entry) —
+            this is the path by which the sampled C_CO2 modulates da/dt.
     """
     ca_ratio = max(c_m, 1e-6) / max(a_m, 1e-9)   # c/a: elongated=larger
     # Longer/shallower crack -> more stagnant tip -> more acidic [Turnbull 1993]
@@ -42,7 +47,7 @@ def crack_tip_pH(a_m: float, c_m: float,
     delta_pH_diss = -0.3 * min(v_diss_mm_yr, 1.0)
 
     # CO₂/HCO₃ buffering reduces pH drop (partial buffer)
-    buffer_factor = min(C_HCO3_MOL / max(C_CO2_MOL, 1e-6), 2.0)
+    buffer_factor = min(C_HCO3_MOL / max(c_co2, 1e-6), 2.0)
     buffering = 0.3 * np.log10(buffer_factor + 1)
 
     pH_tip = pH_bulk + delta_pH_geo + delta_pH_diss + buffering

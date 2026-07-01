@@ -98,7 +98,14 @@ MODEL_ERROR_MEAN = 1.06      # mean of observed/predicted ratio (slight non-cons
 
 # ── Crack colony (Poisson) ────────────────────────────────────────────────
 LAMBDA_COLONY = 5.0e-3       # m^-1 mean colony density [ASSUMED]
-A0_MEAN       = 0.5e-3; A0_STD = 0.2e-3; C0_MEAN = 2.0e-3
+COLONY_SPACING_M = 0.012     # mean axial spacing between cracks within one clustered
+                             # NNpHSCC colony [ASSUMED ~1 cm; field colonies coalesce]
+# Aged-colony initial depth distribution: on an in-service line the cracks have
+# grown for years before assessment, so a0 has a deep tail (a few mm), not a
+# freshly-nucleated sub-mm population. Mean ~1.0 mm, COV ~0.55, tail to ~3-4 mm.
+# ~10% start active (K>=K_IH); the rest are dormant, consistent with Zhao 2017.
+# [ASSUMED, aged NNpHSCC colony; CEPA field crack-depth distributions]
+A0_MEAN       = 1.0e-3; A0_STD = 0.55e-3; C0_MEAN = 2.0e-3
 
 # ── FFS limits ────────────────────────────────────────────────────────────
 MAX_WL_FRAC = 0.20; A_CRIT_FRAC = 0.80; DESIGN_LIFE = 20.0

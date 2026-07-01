@@ -27,16 +27,20 @@ from src.constants import K_IH_BASE_MPa, K_IC_AIR, P_OP_BAR
 # ── K_IH degradation with H₂ blending ────────────────────────────────────
 # [SOURCE: Cui et al. 2024 fracture toughness data for X65 at 9 MPa]
 # K_IH_blend = K_IH_base × HDF_blend(x_H2, P_H2)
-# Interpolated from: K_IH(0%) = 1.0×, K_IH(10%) ≈ 0.765×, K_IH(30%) ≈ 0.570×
+# Anchored on Cui et al. 2024: K_IH(3%) ≈ 0.765× (23.5% reduction) and
+# K_IH(10%) ≈ 0.569× (43.1% reduction). Higher fractions extrapolated toward the
+# ASME B31.12 pure-H₂ HDF range. (The previous table placed Cui's 3% and 10%
+# values at 10% and 30%, understating the degradation ~3× — non-conservative.)
 
 H2_BLEND_TABLE = {
     0.00: 1.000,    # pure natural gas
-    0.05: 0.900,    # 5% H₂ [ASSUMED interpolated]
-    0.10: 0.765,    # 10% H₂ [SOURCE: ~23.5% reduction from Cui et al. 2024]
-    0.20: 0.650,    # 20% H₂ [ASSUMED interpolated]
-    0.30: 0.570,    # 30% H₂ [SOURCE: ~43.1% reduction at 10% → extrapolated]
-    0.50: 0.450,    # 50% H₂ [ASSUMED extrapolated]
-    1.00: 0.280,    # pure H₂ [SOURCE: ASME B31.12 HDF range calibrated]
+    0.03: 0.765,    # 3% H₂ [SOURCE: Cui et al. 2024 — 23.5% K_IH reduction]
+    0.05: 0.680,    # 5% H₂ [ASSUMED interpolated between Cui anchors]
+    0.10: 0.569,    # 10% H₂ [SOURCE: Cui et al. 2024 — 43.1% K_IH reduction]
+    0.20: 0.470,    # 20% H₂ [ASSUMED extrapolated]
+    0.30: 0.400,    # 30% H₂ [ASSUMED extrapolated]
+    0.50: 0.320,    # 50% H₂ [ASSUMED extrapolated]
+    1.00: 0.220,    # pure H₂ [ASSUMED, toward ASME B31.12 HDF range]
 }
 
 # CO₂ synergy factor: HE_index multiplier for CO₂-containing blends

@@ -110,8 +110,10 @@ class TestDormancy:
         assert crack_is_dormant(0.05e-3, 1e-3, 0.001) == True
     def test_large_crack_active(self):
         from src.crack_growth import crack_is_dormant
-        # Large crack with sufficient H should be active
-        assert crack_is_dormant(5e-3, 15e-3, 0.05) == False
+        # A crack past the K_IH threshold with sufficient H is active (Stage II).
+        # Base metal reaches K_IH=25 MPa√m near ~5 mm, so 6 mm is unambiguously
+        # active; a 5 mm flaw sits right at the threshold and is (correctly) dormant.
+        assert crack_is_dormant(6e-3, 18e-3, 0.05) == False
     def test_dormancy_at_low_C_H(self):
         from src.crack_growth import crack_is_dormant
         # Even large crack dormant if C_H below threshold

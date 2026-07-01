@@ -18,7 +18,9 @@ from scipy.stats import norm, lognorm, uniform as sp_uni, spearmanr
 from src.constants import (E_CP_V, C_CO2_MOL, A0_MEAN, PIPE_WT, DESIGN_LIFE,
                             P_OP_BAR, SOIL_PH, K_IH_BASE_MPa, K_IH_HAZ_MPa)
 from src.crack_growth import (K_I_deeppoint, K_I_surfacepoint, delta_K,
-                              delta_K_surface, crack_is_dormant, K_I_total)
+                              delta_K_surface, crack_is_dormant, flaw_is_critical,
+                              K_I_residual)
+from src.cp_optimization import CGR_factor_from_potential
 from src.pressure_spectrum import da_dt_variable_amplitude, PressureSpectrum, da_dN_Chen_Xing
 from src.model_uncertainty import sample_model_error, MODEL_ERROR_MEAN, MODEL_ERROR_COV
 from src.pod_ilicurve import sample_a0_post_inspection
@@ -74,9 +76,10 @@ def _integrate_sample(E_pipe_k, C_CO2_k, a0_mm_k, zone_frac_k, spec_idx_k,
     """
     Proper per-sample crack-growth integration (replaces the old frozen-rate
     linear extrapolation). The depth rate is re-evaluated at the current depth
-    on every step, dormancy is applied, and the sample FAILS the moment K_I
-    reaches the zone-dependent K_IH (so the failure criterion matches the
-    physics, not a single hardcoded 3.3 mm threshold).
+    on every step, dormancy is applied, and the sample FAILS via the unified
+    limit state flaw_is_critical (leak at 80% wall / net-section collapse / K_IC)
+    — NOT at K_IH, which is only the environmental-cracking onset threshold.
+    Potential and CO2 both modulate the rate (see below).
 
     Returns (a_traj_mm[len(t_years)], failed, t_fail_yr).
     """
@@ -84,11 +87,21 @@ def _integrate_sample(E_pipe_k, C_CO2_k, a0_mm_k, zone_frac_k, spec_idx_k,
     props = get_zone_properties(zone)
     K_IH = props['K_IH']
     f_micro = props['da_dt_factor']
-    # propagate the sampled hydrogen multiplier into the growth-rate HEDE term
-    C_H_bulk_eff = props['C_H_bulk'] * max(C_H_mult_k, 0.0)
     spec_types = ["Type_I", "Type_II", "Type_III"]
     spectrum = PressureSpectrum(spectrum_type=spec_types[int(spec_idx_k)])
     C_H_0 = C_H_surface_from_potential(E_pipe_k, SOIL_PH) * C_H_mult_k
+
+    # Potential and CO2 modulate the growth rate, anchored so that at the NACE
+    # reference (E_CP = -0.85 V, reference CO2) both factors are 1.0 and the
+    # base-metal calibration is preserved. CP uses the non-monotonic NNpHSCC CGR
+    # curve (minimum near -0.75 V), so PoF genuinely responds to potential and
+    # -0.75 V minimises it; higher CO2 weakens the crack-tip buffer.
+    pot_factor = CGR_factor_from_potential(E_pipe_k) / CGR_factor_from_potential(E_CP_V)
+    pH_co2 = crack_tip_pH(1e-3, 3e-3, SOIL_PH, c_co2=C_CO2_k)
+    pH_ref = crack_tip_pH(1e-3, 3e-3, SOIL_PH, c_co2=C_CO2_MOL)
+    co2_factor = 10.0 ** ((pH_ref - pH_co2) * 0.3)
+    C_H_for_rate = props['C_H_bulk'] * max(C_H_mult_k, 0.0) * pot_factor * co2_factor
+    in_haz = (zone == 'haz')
 
     a = a0_mm_k * 1e-3
     c = max(a * 3, 2e-3)
@@ -99,25 +112,25 @@ def _integrate_sample(E_pipe_k, C_CO2_k, a0_mm_k, zone_frac_k, spec_idx_k,
 
     for i in range(n):
         a_traj[i] = a * 1000.0
-        KI = K_I_total(a, c, P_OP_BAR, in_HAZ=(zone == 'haz'))
-        if KI >= K_IH:
+        if flaw_is_critical(a, c, P_OP_BAR, in_HAZ=in_haz):
             failed = True
             t_fail = t_years[i]
-            a_traj[i:] = a * 1000.0   # frozen at rupture
+            a_traj[i:] = a * 1000.0   # frozen at failure
             break
         if i < n - 1:
             dt_s = (t_years[i+1] - t_years[i]) * SEC_PER_YR
-            pH_tip = crack_tip_pH(a, c, SOIL_PH)
+            pH_tip = crack_tip_pH(a, c, SOIL_PH, c_co2=C_CO2_k)
             C_H_tip = C_H_entry_corrected(C_H_0, pH_tip, SOIL_PH)
             df = 0.10 if crack_is_dormant(a, c, C_H_tip, P_OP_BAR, K_IH, zone) else 1.0
             da_dt = da_dt_variable_amplitude(
-                a, spectrum, C_H_bulk_eff,
-                K_I_func=lambda am, P: K_I_deeppoint(am, c, P),
+                a, spectrum, C_H_for_rate,
+                K_I_func=lambda am, P: K_I_deeppoint(am, c, P)
+                          + (K_I_residual(am) if in_haz else 0.0),
                 delta_K_func=lambda am, P, R: delta_K(am, c, P, R),
                 microstructure_factor=f_micro, model_error=eps_k,
                 interaction_factor=f_int_k, spectrum_type=spectrum.type)
             dc_dt = da_dt_variable_amplitude(
-                a, spectrum, C_H_bulk_eff,
+                a, spectrum, C_H_for_rate,
                 K_I_func=lambda am, P: K_I_surfacepoint(am, c, P),
                 delta_K_func=lambda am, P, R: delta_K_surface(am, c, P, R),
                 microstructure_factor=f_micro, model_error=eps_k,
