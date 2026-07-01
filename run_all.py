@@ -65,7 +65,8 @@ from src.crack_colony import simulate_colony
 colony = simulate_colony(E_pipe=E_CP_V, spectrum_type="Type_I",
                               post_ILI=True, n_cracks=25, t_end_yr=20, n_t=40, seed=42)
 print(f"  Dormant initially: {colony['n_dormant_initial']}/{colony['n_cracks']} ({colony['n_dormant_initial']/colony['n_cracks']:.0%})")
-print(f"  Coalescences (BS 7910): {colony['n_coalesced']}  PoF(t=20yr): {colony['pof_final']:.3f}")
+print(f"  Coalescences (BS 7910): {colony['n_coalesced']}  colony damage fraction(20yr): {colony['pof_final']:.3f}")
+print(f"  (headline failure PROBABILITY is the Monte Carlo PoF above; the colony is one realisation illustrating the coalescence mechanism)")
 
 # [6] Bayesian update
 print("\n[6/10] Bayesian posterior update (particle filter)...")
@@ -119,7 +120,7 @@ animate_crack_colony(colony)
 print(f"\n{'='*72}")
 print(f"Complete in {time.time()-t_wall:.0f}s")
 n_figs = len(os.listdir("assets/figures"))
-print(f"Panels: {n_figs} | Tests: run `pytest tests/ -q` (205 tests)")
+print(f"Panels: {n_figs} | Tests: run `pytest tests/ -q` (215 tests)")
 print(f"Key mechanisms: Chen-Sutherby-Xing | VA Type I | Dormancy | POD | ε_model | Bayes")
 print(f"{'='*72}")
 

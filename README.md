@@ -4,7 +4,7 @@
 [![Release](https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/actions/workflows/release.yml/badge.svg)](https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-205%20passed-brightgreen.svg)](#validation)
+[![Tests](https://img.shields.io/badge/tests-215%20passed-brightgreen.svg)](#validation)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20172241.svg)](https://doi.org/10.5281/zenodo.20172241)
 
@@ -35,7 +35,7 @@ cd integrity-code-series-week-10_nnph_scc
 pip install -e .[dev]
 
 # Validate
-pytest tests/ -q                          # 205 tests
+pytest tests/ -q                          # 215 tests
 python -m validation.benchmarks           # textbook constants
 
 # Reproduce all panels + audit-chained outputs
@@ -81,16 +81,29 @@ uncertainty as a sampled variable — not a footnote.
     n_HE = 0.88 [SOURCE: Sun et al. 2021, Xing model]
 
 ### Variable Amplitude Loading (Type I underload)
-**[SOURCE: Chen 2007 — "10x enhancement under underload VA loading"]**
+**[SOURCE: Chen literature via ScienceDirect Topics Ch.30 — underload VA enhancement]**
 
     da/dt = f_major × da/dN_major + f_minor × da/dN_minor × F_INT
 
-    F_INT = 10  [SOURCE: Chen 2007 — underload-minor interaction factor]
+    F_INT = 10  [ASSUMED: 10x underload-minor interaction — tertiary web
+                 source (ScienceDirect Topics Ch.30), not the Chen 2007 journal]
 
 ### Crack Dormancy Criterion (Stage I → Stage II)
 **[SOURCE: Zhao et al. 2017 — >95% cracks remain dormant below 1mm]**
 
-    Dormant if: ΔK < ΔK_th_Stage2 = 2.2 MPa√m  OR  C_H < C_H_crit
+    Active (Stage II) iff  K_max ≥ K_IH  AND  C_H ≥ C_H_crit ;  dormant otherwise
+
+Because a base-metal flaw only reaches K_IH = 25 MPa√m near ~5 mm depth, the whole
+sub-millimetre population is below threshold and dormant — the model reproduces
+Zhao's ~95%-dormant result (a sub-mm colony returns ~95–100% dormant).
+
+### Failure Limit State
+**[SOURCE: ASME B31G surface-flaw flow-stress criterion; API 579-1 Level 2]**
+
+    Critical if  a ≥ 0.80·t (leak)  OR  net-section collapse (Folias M_T)  OR  K ≥ K_IC
+
+K_IH is the onset threshold for environmental cracking, **not** a rupture
+criterion; a coalesced (long) flaw fails by collapse at a shallower depth.
 
 ### 3D Semi-Elliptical Crack (two coupled EDOs)
 **[SOURCE: Newman & Raju 1981]**
@@ -164,7 +177,7 @@ integrity-code-series-week-10_nnph_scc/
 ├── visualization/
 │   ├── plot_all.py               6 core panels + colony GIF generator
 │   └── plot_advanced.py          3 extended panels (CP, H2, inspection optimizer)
-├── tests/test_week10.py          205 tests
+├── tests/test_week10.py          215 tests
 ├── assets/figures/               9 panels (300 DPI)
 ├── assets/animations/            Crack colony GIF
 └── assets/audit_chain.json
@@ -178,7 +191,7 @@ integrity-code-series-week-10_nnph_scc/
 |-----------|----|----|--------|
 | Crack growth model | Paris law | Chen-Sutherby-Xing combined parameter | Chen & Sutherby 2007 |
 | Frequency dependence | Linear f | Saturation at f_crit = 10^-3 Hz | Xing et al. |
-| VA loading | Constant amplitude | Type I underload with F_INT=10 | Chen 2007 |
+| VA loading | Constant amplitude | Type I underload with F_INT=10 [ASSUMED] | Chen lit. via ScienceDirect Topics Ch.30 |
 | Crack dormancy | None | Stage I/II criterion, 95% dormant | Zhao et al. 2017 |
 | Microstructure | Uniform | HAZ vs base, K_IH and da/dt different | Beavers et al. 2001 |
 | ILI POD | LogNormal a0 | Post-inspection Weibull rejection sampling | PHMSA TVC |
@@ -198,7 +211,7 @@ integrity-code-series-week-10_nnph_scc/
 | A_CF_BASE | 4.0×10^-14 | Calibrated to CEPA field: 0.3 mm/yr at a=2mm (c/a=4), Newman-Raju SIF |
 | K_IH base | 25 MPa√m | CEPA RP 3rd Ed. range 15–35 |
 | K_IH HAZ | 17.5 MPa√m | 70% of base [ASSUMED] |
-| F_INT | 10 | Chen 2007 underload interaction |
+| F_INT | 10 | [ASSUMED] underload interaction — Chen lit. via ScienceDirect Topics Ch.30, not the journal |
 | f_crit | 10^-3 Hz | Xing et al. frequency saturation |
 | a_90 (POD) | 4 mm | Modern EMAT [ASSUMED] |
 | C_H_bulk X65 | 0.02 mol/m³ | Sun et al. 2021 range calibrated |

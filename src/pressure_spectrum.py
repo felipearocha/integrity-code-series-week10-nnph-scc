@@ -149,17 +149,17 @@ def da_dt_variable_amplitude(a_m, spectrum: PressureSpectrum, C_H_bulk,
       da/dt = 0.5 × Type_I + 0.5 × Type_II
     """
     P_max = spectrum.P_max
-    dP_maj = spectrum.dP_major()
-    dP_min = spectrum.dP_minor()
 
     # Major cycle SIFs
     K_max_maj = K_I_func(a_m, P_max)
     dK_maj    = delta_K_func(a_m, P_max, spectrum.R_major())
 
-    # Minor cycle SIFs (smaller ΔP on top of same K_max)
-    K_max_min = K_max_maj                      # same mean stress
-    dK_min    = delta_K_func(a_m, dP_min/P_max * P_max + P_max*(1-dP_min/P_max),
-                              spectrum.R_minor())
+    # Minor ripple cycles ride at the peak (same K_max) with a small stress
+    # swing governed by R_minor. NOTE: the minor-cycle ΔK is set by R_minor, not
+    # by P_CYCLE_FRAC_MINOR — the previous expression algebraically collapsed to
+    # P_max, so frac_minor never entered ΔK. Kept behaviour-identical (R_minor).
+    K_max_min = K_max_maj
+    dK_min    = delta_K_func(a_m, P_max, spectrum.R_minor())
 
     da_dN_maj = da_dN_Chen_Xing(a_m, K_max_maj, dK_maj, spectrum.f_major,
                                   C_H_bulk, microstructure_factor=microstructure_factor,

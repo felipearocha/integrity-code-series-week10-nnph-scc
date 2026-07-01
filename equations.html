@@ -314,7 +314,7 @@ $$
 \frac{da}{dt} \;=\; f_{\text{major}}\,\Bigl(\tfrac{da}{dN}\Bigr)_{\text{major}}
 \;+\; f_{\text{minor}}\,\Bigl(\tfrac{da}{dN}\Bigr)_{\text{minor}}\,F_{\text{INT}}
 $$
-$F_{\text{INT}} = 10$ for Type I underload (Chen 2007). Downstream of compressor stations, this term produces ~10× the CGR of mid-pipe constant-amplitude loading.
+$F_{\text{INT}} = 10$ <strong>[ASSUMED]</strong> for Type I underload. The underload-interaction effect is described qualitatively by Chen (2007); the exact multiplier used here is an assumed value from a secondary source and is <strong>not</strong> read from that journal. Downstream of compressor stations, this term produces ~10× the CGR of mid-pipe constant-amplitude loading.
 <p>Code: <span class="code-ref">src/pressure_spectrum.py → da_dt_variable_amplitude</span>.</p>
 </div>
 
@@ -333,12 +333,13 @@ $$
 
 <h3>4.1 Stage I → Stage II transition criterion</h3>
 <div class="eq-card">
-A crack is dormant (Stage I, slow dissolution only) unless BOTH:
+A flaw is active (Stage II) if and only if BOTH conditions hold; otherwise it is dormant (Stage I, slow dissolution only):
 $$
-\Delta K \;\ge\; \Delta K_{th}^{\,\text{Stage II}} = 2.2\;\text{MPa}\sqrt{\text{m}}
+K_{\max} \;\ge\; K_{IH} = 25\;\text{MPa}\sqrt{\text{m}}
 \quad\text{AND}\quad
 C_H^{\,\text{tip}} \;\ge\; C_H^{\,\text{crit, Stage II}}
 $$
+A base-metal flaw only reaches $K_{IH}$ near ~5 mm depth, so sub-millimetre flaws sit below the threshold and remain dormant. Running a sub-mm colony returns ~95–100 % dormant, reproducing Zhao et al. (2017)'s >95 %-below-1 mm result.
 <p class="src">SOURCE: Zhao et al. (2017) — >95 % of NNpHSCC cracks remain below 1 mm and never transition to Stage II; Shirazi et al. (2024) on dissolution-rate saturation.</p>
 <p>Code: <span class="code-ref">src/crack_growth.py → crack_is_dormant</span>.</p>
 </div>
@@ -468,6 +469,21 @@ $$
 <p>Code: <span class="code-ref">src/fad_assessment.py → maop_comparison</span>; constants <span class="code-ref">F_B31_8_CL2, F_B31_8_CL3, HDF_B31_12</span>.</p>
 </div>
 
+<h3>7.3 Flaw failure limit state</h3>
+<div class="eq-card">
+A growing flaw is treated as critical (end of life) when ANY of the following is met:
+$$
+a \;\ge\; 0.80\,t \;\;\text{(through-wall leak)}
+\quad\text{OR}\quad
+\sigma_{\text{ref}} \;\ge\; \frac{\sigma_{\text{flow}}}{M_T} \;\;\text{(net-section plastic collapse)}
+\quad\text{OR}\quad
+K_I \;\ge\; K_{IC}
+$$
+where $M_T$ is the Folias bulging (surface-correction) factor for an axial flaw, which grows with flaw length $c$. $K_{IH}$ is the <strong>onset</strong> threshold for environmental cracking (Section 4.1), <strong>not</strong> a rupture criterion. A coalesced (long) flaw reaches plastic collapse at a shallower depth than an isolated flaw.
+<p class="src">SOURCE: API 579-1/ASME FFS-1; Folias (1965) bulging factor; BS 7910:2019.</p>
+<p>Code: <span class="code-ref">src/fad_assessment.py</span>.</p>
+</div>
+
 <!-- ─────────────────────────────────────────────────────────── -->
 <h2 id="nde">8. NDE — Probability of Detection &amp; Post-Inspection</h2>
 
@@ -561,12 +577,19 @@ HE index combining H₂ partial pressure and CO₂ impurity:
 $$
 \text{HE index} \;=\; \bigl(\tfrac{P_{\text{H}_2}}{P_{\text{ref}}}\bigr)^{1/2}\;\bigl(1 + 2.42\,x_{\text{CO}_2}\bigr)
 $$
+Re-anchored on Cui et al. (2024), with $K_{IH,0} = 25\;\text{MPa}\sqrt{\text{m}}$:
+$$
+K_{IH}(3\%) = 0.765\,K_{IH,0} = 19.1,\quad
+K_{IH}(10\%) = 0.569\,K_{IH,0} = 14.2,\quad
+K_{IH}(30\%) \approx 10.0,\quad
+K_{IH}(100\%) \approx 5.5\;\text{MPa}\sqrt{\text{m}}
+$$
 Resulting MAOP cascade (24″ X65, 0.500″ WT, B31.8 Class 2 base):
 $$
 x_{\text{H}_2}=0\%\;\Rightarrow\;134\;\text{bar},\qquad
-10\%\;\Rightarrow\;103\;\text{bar},\qquad
-30\%\;\Rightarrow\;77\;\text{bar},\qquad
-100\%\;\Rightarrow\;38\;\text{bar}
+10\%\;\Rightarrow\;76\;\text{bar}\;(-43\%),\qquad
+30\%\;\Rightarrow\;54\;\text{bar}\;(-60\%),\qquad
+100\%\;\Rightarrow\;29\;\text{bar}\;(-78\%)
 $$
 <p class="src">SOURCE: Cui et al. (2024) <em>J. Mater. Res. Technol.</em>.</p>
 <p>Code: <span class="code-ref">src/h2_blending.py → K_IH_blend, HE_index_blend, MAOP_blend</span>.</p>
@@ -577,7 +600,7 @@ $$
 </div>
 
 <footer>
-  Integrity Code Series — Week 10 · Felipe Rocha · 205 / 205 tests passing · Audit-chained outputs<br>
+  Integrity Code Series — Week 10 · Felipe Rocha · 215 / 215 tests passing · Audit-chained outputs<br>
   Open the panels in <code>assets/figures/</code> for visual results.
 </footer>
 
