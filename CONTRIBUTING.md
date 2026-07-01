@@ -27,7 +27,7 @@ Thank you for considering a contribution. This is a research-grade package; tech
    python run_all.py
    ```
 5. Open a pull request against `main`. Fill out the PR template.
-6. CI must pass on all supported Python versions (3.10, 3.11, 3.12).
+6. CI must pass on all supported Python versions (3.11, 3.12).
 
 ## Adding a new damage mechanism or correlation
 

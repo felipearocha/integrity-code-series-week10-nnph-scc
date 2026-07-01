@@ -21,7 +21,7 @@ P_CYCLE_FRAC_MINOR = 0.02   # minor ripple cycle [ASSUMED]
 N_MINOR_PER_MAJOR  = 8      # minor cycles between each underload [ASSUMED]
 FREQ_MAJOR_HZ = 1.16e-5     # 1 underload/day downstream compressor [ASSUMED]
 FREQ_MINOR_HZ = 9.26e-5     # 8 ripples/day [ASSUMED]
-F_CRIT_HZ     = 1.0e-3      # critical frequency; saturates below this [SOURCE: Xing et al.]
+F_CRIT_HZ     = 1.0e-3      # critical frequency; saturates below this [SOURCE: Xing model via Sun, Zhou & Kang 2021]
 
 # ── Regulatory MAOP ──────────────────────────────────────────────────────
 F_B31_8_CL2 = 0.72; F_B31_8_CL3 = 0.60; HDF_B31_12 = 0.54
@@ -64,7 +64,7 @@ F_MICRO_HAZ   = 1.30        # da/dt multiplier in HAZ [SOURCE: Beavers et al. 30
 # ── Chen-Sutherby-Xing crack growth model ────────────────────────────────
 # [SOURCE: Chen & Sutherby 2007; Xing et al. via Sun et al. 2021]
 # da/dN = A_CF × (K_max × ΔK² × f_eff^(-0.1))^n × HE_factor(C_H_bulk)
-A_CF_BASE    = 2.4e-14      # [ASSUMED] calibrated to CEPA field observations: 0.3 mm/yr at a=2mm, X65 Type I spectrum
+A_CF_BASE    = 4.0e-14      # [ASSUMED] calibrated so da/dt = 0.3 mm/yr at a=2mm, c/a=4 (CEPA field band), X65 Type I, with the Newman-Raju SIF
 N_CF         = 2.0          # exponent n [SOURCE: Chen & Sutherby 2007 n≈2]
 N_HE_XING    = 0.88         # HEDE exponent for X52 [SOURCE: Sun et al. 2021, Xing model]
 
@@ -98,7 +98,14 @@ MODEL_ERROR_MEAN = 1.06      # mean of observed/predicted ratio (slight non-cons
 
 # ── Crack colony (Poisson) ────────────────────────────────────────────────
 LAMBDA_COLONY = 5.0e-3       # m^-1 mean colony density [ASSUMED]
-A0_MEAN       = 0.5e-3; A0_STD = 0.2e-3; C0_MEAN = 2.0e-3
+COLONY_SPACING_M = 0.012     # mean axial spacing between cracks within one clustered
+                             # NNpHSCC colony [ASSUMED ~1 cm; field colonies coalesce]
+# Aged-colony initial depth distribution: on an in-service line the cracks have
+# grown for years before assessment, so a0 has a deep tail (a few mm), not a
+# freshly-nucleated sub-mm population. Mean ~1.0 mm, COV ~0.55, tail to ~3-4 mm.
+# ~10% start active (K>=K_IH); the rest are dormant, consistent with Zhao 2017.
+# [ASSUMED, aged NNpHSCC colony; CEPA field crack-depth distributions]
+A0_MEAN       = 1.0e-3; A0_STD = 0.55e-3; C0_MEAN = 2.0e-3
 
 # ── FFS limits ────────────────────────────────────────────────────────────
 MAX_WL_FRAC = 0.20; A_CRIT_FRAC = 0.80; DESIGN_LIFE = 20.0

@@ -80,8 +80,7 @@ def optimal_inspection_interval(PoF_func: Callable,
         return total_expected_cost_rate(T, PoF_func, C_insp, CoF)
 
     result = minimize_scalar(cost_fn, bounds=(T_min_yr, T_max_yr), method='bounded')
-    T_opt = float(result.x)
-    cost_opt = float(result.fun)
+    T_opt_cost = float(result.x)
 
     # Cost curve for visualization
     T_arr = np.linspace(T_min_yr, T_max_yr, 100)
@@ -94,6 +93,13 @@ def optimal_inspection_interval(PoF_func: Callable,
         if p >= POF_LIMIT_REGULATORY:
             T_pof_limit = float(t)
             break
+
+    # Risk constraint: the interval must not exceed T_pof_limit — you have to
+    # re-inspect before PoF reaches the regulatory limit. Without this cap a
+    # fast-rising PoF lets the C_insp/T term dominate and pushes the cost optimum
+    # to T_max, which is backwards for an aggressive (short-life) segment.
+    T_opt = float(min(T_opt_cost, T_pof_limit))
+    cost_opt = float(cost_fn(T_opt))
 
     # PHMSA 5yr limit check
     phmsa_compliant = T_opt <= 5.0

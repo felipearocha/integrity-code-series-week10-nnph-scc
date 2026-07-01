@@ -107,34 +107,40 @@ def multi_inspection_update(a0_prior_mm: np.ndarray,
     Returns posterior distribution summary and weight history.
     """
     N = len(a0_prior_mm)
+    particles = np.asarray(a0_prior_mm, dtype=float).copy()
     weights = np.ones(N) / N  # uniform prior weights
+    # weight_history[i] are the weights that apply to particle_history[i]; they
+    # are kept aligned across resampling so the posterior can be drawn correctly.
     weight_history = [weights.copy()]
+    particle_history = [particles.copy()]
     ess_history = [float(N)]
+    rng = np.random.default_rng(42)
 
     for insp in inspection_log:
         weights, ess = bayesian_update_particles(
-            a0_prior_mm, weights,
+            particles, weights,
             a_obs_mm=insp.get('a_obs_mm', 0.0),
             detected=insp['detected'],
             t_obs_yr=insp['t_yr'],
             da_dt_mm_yr=da_dt_mm_yr,
         )
         weight_history.append(weights.copy())
+        particle_history.append(particles.copy())   # weights apply to THESE particles
         ess_history.append(ess)
 
         # Resample if ESS < N/2 (avoid weight collapse)
         if ess < N / 2:
-            rng = np.random.default_rng(42)
             resample_idx = rng.choice(N, size=N, p=weights, replace=True)
-            a0_prior_mm = a0_prior_mm[resample_idx]
+            particles = particles[resample_idx]
             weights = np.ones(N) / N
 
-    posterior = posterior_summary(a0_prior_mm, weights)
+    posterior = posterior_summary(particles, weights)
     return {
         'posterior': posterior,
-        'particles': a0_prior_mm,
+        'particles': particles,
         'weights': weights,
         'ess_history': ess_history,
         'weight_history': weight_history,
+        'particle_history': particle_history,
         'n_inspections': len(inspection_log),
     }

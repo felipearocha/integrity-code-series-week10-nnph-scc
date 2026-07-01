@@ -110,8 +110,10 @@ class TestDormancy:
         assert crack_is_dormant(0.05e-3, 1e-3, 0.001) == True
     def test_large_crack_active(self):
         from src.crack_growth import crack_is_dormant
-        # Large crack with sufficient H should be active
-        assert crack_is_dormant(5e-3, 15e-3, 0.05) == False
+        # A crack past the K_IH threshold with sufficient H is active (Stage II).
+        # Base metal reaches K_IH=25 MPa√m near ~5 mm, so 6 mm is unambiguously
+        # active; a 5 mm flaw sits right at the threshold and is (correctly) dormant.
+        assert crack_is_dormant(6e-3, 18e-3, 0.05) == False
     def test_dormancy_at_low_C_H(self):
         from src.crack_growth import crack_is_dormant
         # Even large crack dormant if C_H below threshold
@@ -274,7 +276,7 @@ class TestParametrized:
 
 # ── Regression locked values ───────────────────────────────────────────────
 class TestRegression:
-    def test_A_CF_base(self): assert abs(A_CF_BASE - 2.4e-14)/2.4e-14 < 0.01
+    def test_A_CF_base(self): assert abs(A_CF_BASE - 4.0e-14)/4.0e-14 < 0.01  # recalibrated with Newman-Raju SIF
     def test_K_IH_base(self): assert abs(K_IH_BASE_MPa - 25.0) < 0.01
     def test_MODEL_COV(self): assert abs(MODEL_ERROR_COV - 0.612) < 0.005
     def test_dormancy_threshold(self): assert abs(A_DORMANCY_MM - 1.0) < 0.01
@@ -665,3 +667,103 @@ class TestInspectionOptimizer:
         r1 = optimal_inspection_interval(pof_func, CoF=1e6)
         r2 = optimal_inspection_interval(pof_func, CoF=1e8)
         assert r2['T_opt_yr'] <= r1['T_opt_yr']
+
+
+# ── Gate 3 hardening: hash-chain integrity, reproducibility, convergence ───────
+# Added to close ICS2 QC Gate 3 (>200 tests) with categories the suite under-covered:
+# audit-chain tamper detection, seeded reproducibility, and timestep convergence.
+class TestAuditChainIntegrity:
+    def test_genesis_prev_hash_is_zeros(self):
+        from src.audit_chain import AuditChain
+        ch = AuditChain()
+        e0 = ch.append("genesis", {"x": 1}, {"y": 2})
+        assert e0.prev_hash == "0" * 64
+
+    def test_prev_hash_links_to_previous_entry(self):
+        from src.audit_chain import AuditChain
+        ch = AuditChain()
+        e0 = ch.append("r0", {"a": 1}, {"b": 1})
+        e1 = ch.append("r1", {"a": 2}, {"b": 2})
+        assert e1.prev_hash == e0.entry_hash and ch.verify_chain()
+
+    def test_tamper_breaks_chain(self):
+        # Mutating a logged entry's outputs after the fact must be detectable.
+        from src.audit_chain import AuditChain
+        ch = AuditChain()
+        for k in range(4):
+            ch.append(f"r{k}", {"step": k}, {"val": k * 10})
+        assert ch.verify_chain()
+        ch[1].outputs["val"] = 999  # silent post-hoc tamper
+        assert ch[1].verify() is False
+        assert ch.verify_chain() is False
+
+    def test_numpy_inputs_serialize_and_verify(self):
+        from src.audit_chain import AuditChain
+        ch = AuditChain()
+        ch.append("np", {"arr": np.array([1.0, 2.0, 3.0])},
+                  {"p50": np.float64(0.5), "n": np.int64(7)})
+        assert ch.verify_chain()
+
+    def test_to_json_roundtrip_preserves_length(self):
+        import json
+        from src.audit_chain import AuditChain
+        ch = AuditChain()
+        for k in range(3):
+            ch.append(f"r{k}", {"i": k}, {"o": k})
+        parsed = json.loads(ch.to_json())
+        assert isinstance(parsed, list) and len(parsed) == len(ch) == 3
+
+
+class TestModelErrorReproducibility:
+    def test_same_seed_identical_draws(self):
+        from src.model_uncertainty import sample_model_error
+        a = sample_model_error(500, seed=123)
+        b = sample_model_error(500, seed=123)
+        assert np.array_equal(a, b)
+
+    def test_different_seed_differs(self):
+        from src.model_uncertainty import sample_model_error
+        a = sample_model_error(500, seed=1)
+        b = sample_model_error(500, seed=2)
+        assert not np.array_equal(a, b)
+
+    def test_quantiles_strictly_ordered(self):
+        from src.model_uncertainty import uncertainty_quantiles
+        q = uncertainty_quantiles()
+        assert q['P05'] < q['P25'] < q['P50'] < q['P75'] < q['P95']
+
+    def test_large_sample_mean_recovers_1p06(self):
+        from src.model_uncertainty import sample_model_error
+        eps = sample_model_error(200_000, seed=7)
+        assert abs(eps.mean() - 1.06) < 0.05  # within 5% of declared mean
+
+
+class TestTimestepConvergence:
+    def test_crack_growth_refinement_converges(self):
+        # ICS2 Gate 3 convergence: halving the timestep must change the
+        # integrated final depth by < 5% (the protocol tolerance for
+        # integrated quantities).
+        from src.pressure_spectrum import PressureSpectrum
+        from src.crack_growth import integrate_full
+        sp = PressureSpectrum("Type_I")
+        def ch(_t):
+            return C_H_BULK_X65
+        coarse = integrate_full(0.5e-3, 3e-3, sp, ch, zone='base', t_end_yr=15, n_steps=100)
+        fine   = integrate_full(0.5e-3, 3e-3, sp, ch, zone='base', t_end_yr=15, n_steps=200)
+        a_c, a_f = coarse['a'][-1], fine['a'][-1]
+        rel = abs(a_c - a_f) / a_f
+        assert rel < 0.05, f"timestep not converged: rel diff {rel:.3%}"
+
+    def test_mc_integrates_not_frozen(self):
+        # Regression for the frozen-rate Monte Carlo bug: the old _da_dt_fast
+        # extrapolated linearly from a0, so PoF was identical for any n_t and
+        # growth was a straight line. A propagating crack must accelerate
+        # (super-linear), which only proper step-by-step integration produces.
+        from src.monte_carlo import _integrate_sample
+        t = np.linspace(0, 20, 41)
+        a_traj, failed, t_fail = _integrate_sample(
+            -0.85, 0.05, 2.5, 0.0, 0, 1.0, 1.0, 12.0, t)  # aggressive base sample
+        grow = np.diff(a_traj)
+        grow = grow[grow > 1e-9]                  # pre-fracture growth increments
+        assert grow.size >= 3
+        assert grow[-1] > 1.5 * grow[0]           # accelerating, not constant-rate
