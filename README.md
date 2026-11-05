@@ -208,7 +208,7 @@ and a GBR surrogate OOD fallback are deployment recommendations, not implemented
 
 ---
 
-## Anti-Hallucination Note
+## Provenance Note
 
 Every equation and constant carries an explicit `[SOURCE: ...]` or `[ASSUMED]` tag,
 graded by tier:
