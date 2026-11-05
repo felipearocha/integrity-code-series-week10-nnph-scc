@@ -490,9 +490,9 @@ where $M_T$ is the Folias bulging (surface-correction) factor for an axial flaw,
 <h3>8.1 EMAT / TFI Weibull POD</h3>
 <div class="eq-card">
 $$
-\operatorname{POD}(a) \;=\; 1 - \exp\!\Bigl[-\bigl(\tfrac{a}{a_{90}}\bigr)^{k}\Bigr],\qquad a_{90} = 4\;\text{mm},\quad k = 2
+\operatorname{POD}(a) \;=\; 1 - \exp\!\Bigl[-\ln(10)\,\bigl(\tfrac{a}{a_{90}}\bigr)^{k}\Bigr],\qquad a_{90} = 4\;\text{mm},\quad k = 2
 $$
-At $a = a_{90}$ the Weibull scale gives $1 - 1/e \approx 63.2\%$, matching the $a_{90}$ definition convention used in PHMSA TVC.
+The $\ln(10)$ factor gives $\operatorname{POD}(a_{90}) = 90\%$, the definition of $a_{90}$.
 <p>Code: <span class="code-ref">src/pod_ilicurve.py → pod</span>.</p>
 </div>
 

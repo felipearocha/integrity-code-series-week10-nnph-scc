@@ -35,7 +35,7 @@ def benchmark_pod_weibull():
     from src.pod_ilicurve import pod
     assert abs(pod(0)) < 1e-10
     assert abs(pod(1e6)-1.0) < 1e-6
-    assert 0.60 < pod(4.0) < 0.70  # Weibull scale param: POD=63.2% at a90
+    assert abs(pod(4.0) - 0.90) < 1e-9  # POD = 90% at a90 by definition
     print("POD Weibull: POD(0)=0, POD(4mm)=90%, POD(inf)=1  OK")
 
 def benchmark_model_error_moments():

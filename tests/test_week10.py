@@ -373,7 +373,7 @@ class TestExtendedPhysicsV2:
     def test_pod_a90_parameter(self, a90):
         from src.pod_ilicurve import pod
         p = pod(a90, a90=a90)
-        assert 0.60 < p < 0.70  # Weibull scale: POD=1-1/e=63.2% at a90
+        assert abs(p - 0.90) < 1e-9  # a90 is by definition the depth with POD = 90%
 
     @pytest.mark.parametrize("sp_type",["Type_I","Type_II","Type_III"])
     def test_spectrum_type_I_fastest(self, sp_type):
@@ -405,6 +405,17 @@ class TestExtendedPhysicsV2:
         no_risk = lambda t: 0.0  # cost optimum then sits at T_max
         assert optimal_inspection_interval(no_risk, T_max_yr=6.0)['reassess_cap_compliant']
         assert not optimal_inspection_interval(no_risk, T_max_yr=8.0)['reassess_cap_compliant']
+
+    def test_pod_hand_value_at_half_a90(self):
+        # Hand calculation: 1 - 10^(-(2/4)^2) = 1 - 10^(-0.25) = 0.4377
+        from src.pod_ilicurve import pod
+        assert abs(pod(2.0) - 0.4377) < 1e-3
+
+    def test_kih_crossing_depth_hand_value(self):
+        # Hand calculation, a = 4.88 mm, c = 4a: sigma_h = 165.6 MPa, Q = 1.148, F = 1.3065
+        # K_I = 165.6 * sqrt(pi * 0.00488 / 1.148) * 1.3065 = 25.0 MPa sqrt(m) = K_IH
+        from visualization.plot_all import a_KIH_mm
+        assert abs(a_KIH_mm() - 4.88) < 0.02
 
     def test_fad_level2_hand_value(self):
         # Hand calculation at Lr = 1: (1 - 0.14) * (0.3 + 0.7 * exp(-0.65)) = 0.86 * 0.66543 = 0.5723

@@ -2,7 +2,7 @@
 ILI Probability of Detection (POD) and post-inspection a0 distribution.
 
 [SOURCE: General EMAT/TFI performance data; PHMSA technology verification]
-POD(a) = 1 - exp(-(a/a90)^k)   Weibull form
+POD(a) = 1 - exp(-ln(10) (a/a90)^k)   Weibull form, so that POD(a90) = 0.90
 a90 = 4 mm (depth at which POD = 90%) [ASSUMED modern EMAT tool]
 k   = 2 (Weibull shape) [ASSUMED]
 
@@ -22,10 +22,10 @@ def pod(a_mm: float,
         k: float = POD_WEIBULL_K) -> float:
     """
     Probability of Detection for crack of depth a_mm [mm].
-    POD(a) = 1 - exp(-(a/a90)^k)
+    POD(a) = 1 - exp(-ln(10) (a/a90)^k), which gives POD(a90) = 0.90.
     [ASSUMED] Weibull model per PHMSA TVC guidance.
     """
-    return float(1.0 - np.exp(-((a_mm / a90) ** k)))
+    return float(1.0 - np.exp(-np.log(10.0) * (a_mm / a90) ** k))
 
 
 def prob_missed(a_mm: float, a90: float = POD_A90_MM, k_weibull: float = POD_WEIBULL_K) -> float:
