@@ -76,9 +76,6 @@ profile_default/
 ipython_config.py
 
 # ─── Repo-specific ────────────────────────────────────────────────────
-# Local editor / tool settings — never publish
-.claude/
-
 # Audit chain regenerated on every run_all.py
 assets/audit_chain.json
 

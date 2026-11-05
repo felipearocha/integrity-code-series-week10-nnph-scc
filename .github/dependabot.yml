@@ -6,6 +6,7 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    versioning-strategy: increase-if-necessary
     labels:
       - dependencies
     commit-message:
@@ -21,3 +22,7 @@ updates:
       - github-actions
     commit-message:
       prefix: "chore(ci)"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

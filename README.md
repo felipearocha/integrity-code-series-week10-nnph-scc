@@ -3,46 +3,15 @@
 [![CI](https://github.com/felipearocha/integrity-code-series-week10-nnph-scc/actions/workflows/ci.yml/badge.svg)](https://github.com/felipearocha/integrity-code-series-week10-nnph-scc/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
-[![Tests: 215 passing](https://img.shields.io/badge/tests-215%20passing-brightgreen.svg)](tests)
-[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Tests: 219 passing](https://img.shields.io/badge/tests-219%20passing-brightgreen.svg)](tests)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20172241.svg)](https://doi.org/10.5281/zenodo.20172241)
 
 **Author:** Felipe Rocha — Independent Researcher
 
-## Integrity Code Series
-
-Part of an ongoing series of physics-first integrity simulators by Felipe Rocha:
-
-| # | Repo | Domain |
-|---|---|---|
-| Week 3 | [integrity-code-series-week3-f1-lap-simulation](https://github.com/felipearocha/integrity-code-series-week3-f1-lap-simulation) | F1 lap simulation (six coupled ODEs) |
-| Week 6 | [integrity-code-series-week6-smartphone-galvanic](https://github.com/felipearocha/integrity-code-series-week6-smartphone-galvanic) | Smartphone galvanic corrosion (Laplace + Butler-Volmer) |
-| Week 7 | [integrity-code-series-week7-h2-lferw](https://github.com/felipearocha/integrity-code-series-week7-h2-lferw) | LF-ERW H2 conversion (B31.12 + NACE TM0316) |
-| Week 8 | [integrity-code-series-week8-creep-fatigue-heater](https://github.com/felipearocha/integrity-code-series-week8-creep-fatigue-heater) | Creep-fatigue 9Cr-1Mo (Norton/Omega + Coffin-Manson) |
-| Week 9 | [integrity-code-series-week9-cui](https://github.com/felipearocha/integrity-code-series-week9-cui) | CUI thermohygro-electrochemical (3 PDEs, Strang) |
-| **Week 10** | **[integrity-code-series-week10-nnph-scc](https://github.com/felipearocha/integrity-code-series-week10-nnph-scc)** | **NNpHSCC full-physics (Chen-Sutherby-Xing + BS 7910) — this repo** |
-| Week 11 | [integrity-code-series-week11-erosion-corrosion-multiphase](https://github.com/felipearocha/integrity-code-series-week11-erosion-corrosion-multiphase) | Erosion-corrosion multiphase (NORSOK M-506 + DNV-RP-O501 + G119 + API 579) |
-| Bonus | [Vibration-Accelerated-Corrosion-Coupled-Mechano-Electrochemical-Simulation](https://github.com/felipearocha/Vibration-Accelerated-Corrosion-Coupled-Mechano-Electrochemical-Simulation) | Vibration-accelerated corrosion (SDOF + Butler-Volmer + Archard) |
-| Bonus | [synthetic-integrity-digital-twin-piml](https://github.com/felipearocha/synthetic-integrity-digital-twin-piml) | Physics-informed neural-network surrogate |
-| Bonus | [integrity-data-foundation](https://github.com/felipearocha/integrity-data-foundation) | Engineering data validation baseline |
-
-## Quick Start
-
-```bash
-# Clone and install
-git clone https://github.com/felipearocha/integrity-code-series-week10-nnph-scc.git
-cd integrity-code-series-week10-nnph-scc
-pip install -e .[dev]
-
-# Validate
-pytest tests/ -q                          # 215 tests
-python -m validation.benchmarks           # textbook constants
-
-# Reproduce all panels + audit-chained outputs
-python run_all.py
-```
-
-Browse [`docs/equations.html`](docs/equations.html) in any modern browser for the full LaTeX equations reference.
+Physics-first simulator for Near-Neutral pH Stress Corrosion Cracking (NNpHSCC) on gas
+transmission pipelines: crack growth with the Chen-Sutherby-Xing combined parameter, Newman-Raju
+geometry, dormancy, coalescence, a post-ILI Monte Carlo that samples model error explicitly, and
+a Bayesian update from re-inspection.
 
 ## Problem Statement
 
@@ -53,63 +22,200 @@ motivate this package:
 - **2018 Prince George, BC rupture** — 914mm gas pipeline; NNpHSCC; downstream of a compressor station (Transportation Safety Board of Canada investigation)
 - **2015 Unityville, PA rupture** — 609mm gas pipeline; NNpHSCC (US DOT/PHMSA failure investigation)
 
-PHMSA §192.611(a)(4) (effective March 16, 2026) requires integrity assessment for class location
-changes. This package provides the physics foundation for that assessment.
+PHMSA §192.611(a)(4) (effective March 16, 2026) adds an integrity-management alternative for
+confirming or restoring MAOP on eligible Class 3 segments after a class location change. Segments
+with an in-service leak or rupture due to cracking on the segment, or on similar pipe within
+5 miles, are excluded, so crack threats bear directly on its use. This package provides physics
+background for evaluating that threat; it is not a compliance determination.
 
-**Key finding from v2:** Even the best available NNpHSCC crack growth model has COV = 61.2% on
-validated full-scale test data. This package explicitly incorporates that model structural
-uncertainty as a sampled variable — not a footnote.
+**Key finding from v2:** the HEDE component of Xing's model, the most accurate of the models
+reviewed by Sun, Zhou & Kang (2021), still has COV = 61.2% against 39 crack growth rates from
+full-scale tests. This package incorporates that model structural uncertainty as a sampled
+variable — not a footnote.
 
----
+## Results
+
+From `python run_all.py` (seed 42). The inputs are the nominal and `[ASSUMED]` values in
+`src/constants.py`, so these numbers illustrate the model and do not describe a real pipeline.
+
+| Output | Value |
+|---|---|
+| Base metal, $a_0$ = 0.5 mm | 0.510 mm after 20 yr, dormant |
+| HAZ, $a_0$ = 1.5 mm, model error 1.3 | wall penetration at 1.25 yr |
+| Depth where $K_I$ reaches $K_{IH}$ (base metal, c/a = 4) | 4.88 mm |
+| Monte Carlo, N = 10,000, post-ILI | PoF = 0.1729 at 20 yr |
+| Monte Carlo crack depth at 20 yr | P50 = 0.951 mm, P95 = 12.446 mm (the 98% of wall depth cap) |
+| GBR surrogate | $R^2$ = 0.9204, MAE = 0.373 mm |
+| Colony, 25 cracks, one realisation | 25/25 dormant at start, 19 merges, damage fraction 0.880 at 20 yr |
+| Bayesian update, two detections | $a_0$ P50 0.826 mm to 1.282 mm, ESS 1000, 723, 400 |
+| Crack growth rate vs potential | 1.0x at -750 mV, 2.0x at -850 mV, 5.0x at free corrosion |
+| $K_{IH}$ at 10% / 30% / 100% H₂ | 14.2 / 10.0 / 5.5 MPa√m |
+| Re-inspection interval $T^{*}$ | 1.5 yr, set by the assumed 1% limit and not by CoF |
+
+Monte Carlo sensitivity and crack depth distribution:
+
+![Monte Carlo results](assets/figures/panel_e_mc_full.png)
+
+Inspection interval analysis:
+
+![Inspection interval analysis](assets/figures/panel_k_inspection_optimizer.png)
+
+All nine panels are in [`assets/figures/`](assets/figures), with the colony animation in
+[`assets/animations/`](assets/animations).
 
 ## Governing Equations
 
 [**view the full rendered reference**](https://htmlpreview.github.io/?https://github.com/felipearocha/integrity-code-series-week10-nnph-scc/blob/main/docs/equations.html)
 
-Every constant is tagged to its source standard or paper. The headline equations below
-render natively on GitHub; the complete derivation set (12 sections) lives in
-**[docs/equations.html](docs/equations.html)**.
+Every constant is tagged to its source or to `[ASSUMED]`. The equations below are the ones the
+code solves; the complete set is in **[docs/equations.html](docs/equations.html)**.
 
-### Chen-Sutherby-Xing crack growth (most accurate available model)
+### Chen-Sutherby-Xing crack growth
 **[SOURCE: Chen & Sutherby 2007; Xing et al. via Sun et al. 2021]**
 
-$$ \frac{da}{dN} \;=\; A_{\text{CF}}\,\bigl(K_{\max}\,\Delta K^{\,2}\,f_{\text{eff}}^{-0.1}\bigr)^{n}\;\Phi_{\text{HE}}(C_H) $$
+```math
+\frac{da}{dN} = A_{\mathrm{CF}}\,\bigl(K_{\max}\,\Delta K^{2}\,f_{\mathrm{eff}}^{-0.1}\bigr)^{n}\;\Phi_{\mathrm{HE}}\;f_{\mathrm{micro}}\;\varepsilon_{\mathrm{model}}
+```
 
-HEDE (Xing) multiplier, with $n_{\text{HE}} = 0.88$ and frequency saturation $f_{\text{eff}} = \max(f, f_{\text{crit}})$:
+```math
+f_{\mathrm{eff}} = \max(f,\,f_{\mathrm{crit}}), \qquad \Phi_{\mathrm{HE}} = \max\!\left[\left(\frac{C_H}{C_{H,\mathrm{ref}}}\right)^{n_{\mathrm{HE}}},\;0.1\right]
+```
 
-$$ \Phi_{\text{HE}}(C_H) \;=\; \Bigl(\tfrac{C_H^{\,\text{bulk}}}{C_H^{\,\text{ref}}}\Bigr)^{n_{\text{HE}}}, \qquad n_{\text{HE}} = 0.88 $$
+$a$ is crack depth [m], $N$ cycles, $K_{\max}$ and $\Delta K$ the peak and range of stress
+intensity [MPa√m], $f$ the loading frequency [Hz] with $f_{\mathrm{crit}}$ = 10⁻³ Hz, $n$ = 2,
+$A_{\mathrm{CF}}$ = 4.0×10⁻¹⁴ `[ASSUMED]`, $C_H$ the hydrogen concentration [mol/m³] with
+$C_{H,\mathrm{ref}}$ = 0.001 mol/m³ `[ASSUMED]`, $n_{\mathrm{HE}}$ = 0.88, $f_{\mathrm{micro}}$
+the microstructure factor and $\varepsilon_{\mathrm{model}}$ the model error.
 
-### Oriani-Fick — hydrogen diffusion in the steel wall (with trapping)
+### Hydrogen entry at the pipe surface
+**[ASSUMED, calibrated to H-permeation trends]**
+
+```math
+C_H = C_{H,\mathrm{bulk}}\;e^{\,k_H\,(E_{\mathrm{CP}} - E_{\mathrm{pipe}})}\;10^{-0.3\,(\mathrm{pH}-7)}, \qquad C_H \le 0.15\ \mathrm{mol/m^3}
+```
+
+$E_{\mathrm{pipe}}$ is the pipe-to-soil potential [V CSE], an input to the model,
+$E_{\mathrm{CP}}$ = -0.85 V, $k_H$ = 5.5 V⁻¹ and $C_{H,\mathrm{bulk}}$ = 0.02 mol/m³.
+
+### Oriani-Fick hydrogen diffusion in the steel wall
 **[SOURCE: Kiuchi & McLellan 1983; Turnbull 1996; San Marchi 2012]**
 
-$$ \frac{\partial C_L}{\partial t} \;=\; D_{\text{eff}}(T,\sigma_h)\,\frac{\partial^{2} C_L}{\partial r^{2}} + \frac{D_{\text{eff}}\,V_H}{R\,T}\,\frac{\partial}{\partial r}\!\Bigl(C_L\,\frac{\partial \sigma_h}{\partial r}\Bigr) $$
+```math
+\frac{\partial C_L}{\partial t} = D_{\mathrm{eff}}(T,\sigma_h)\,\frac{\partial^{2} C_L}{\partial r^{2}} + \frac{D_{\mathrm{eff}}\,V_H}{R\,T}\,\frac{\partial}{\partial r}\!\left(C_L\,\frac{\partial \sigma_h}{\partial r}\right)
+```
 
-### Stress Intensity Factor — Newman-Raju surface crack
+$C_L$ is lattice hydrogen [mol/m³], $D_{\mathrm{eff}}$ the trap-corrected diffusivity [m²/s],
+$\sigma_h$ the hydrostatic stress [Pa], $V_H$ the partial molar volume of hydrogen [m³/mol], $R$
+the gas constant, $T$ temperature [K] and $r$ the through-wall coordinate [m]. Implemented in
+`src/hydrogen_diffusion.py` (`run_H_diffusion`) as a standalone module: the crack-growth pipeline
+uses the surface value above and does not call this solver.
+
+### Stress intensity factor — Newman-Raju surface crack
 **[SOURCE: Newman & Raju 1981]**
 
-$$ K_I^{\,(A)} \;=\; \sigma_h\,\sqrt{\frac{\pi\,a}{Q}}\;F\!\Bigl(\tfrac{a}{t},\tfrac{a}{c},\,\tfrac{\pi}{2}\Bigr) $$
+```math
+K_I = \sigma_h\,\sqrt{\frac{\pi\,a}{Q}}\;F, \qquad Q = 1 + 1.464\left(\frac{a}{c}\right)^{1.65}, \qquad F = M_1 + M_2\left(\frac{a}{t}\right)^{2} + M_3\left(\frac{a}{t}\right)^{4}
+```
 
-### Crack-tip acidification (Turnbull)
-**[SOURCE: Turnbull 1993]**
+Here $\sigma_h$ is the hoop stress [MPa], $c$ the half-length, $t$ the wall thickness, and
+$M_1$, $M_2$, $M_3$ the Newman-Raju functions of $a/c$ at the deepest point.
 
-$$ \text{pH}_{\text{tip}} \;=\; \text{pH}_{\text{bulk}} \;-\; 0.6\,\log_{10}\!\Bigl(\tfrac{c}{a}\Bigr) \;-\; 0.3\,v_{\text{diss}} \;+\; \text{buffer correction} $$
+### Crack-tip acidification
+**[SOURCE: Turnbull 1993, simplified; coefficients ASSUMED]**
 
-### Model structural uncertainty (headline v2 finding)
-**[SOURCE: Sun, Zhou & Kang 2021 JIPR — 39 full-scale CanmetMATERIALS tests]**
+```math
+\mathrm{pH}_{\mathrm{tip}} = \mathrm{pH}_{\mathrm{bulk}} - 0.6\,\log_{10}\!\left(\frac{c}{a}\right) - 0.3\,v_{\mathrm{diss}} + 0.3\,\log_{10}(b + 1)
+```
 
-$$ \left(\tfrac{da}{dt}\right)_{\!\text{real}} \;=\; \left(\tfrac{da}{dt}\right)_{\!\text{model}}\!\!\cdot\,\varepsilon_{\text{model}},\qquad \varepsilon_{\text{model}} \sim \operatorname{LogNormal}(\mu=1.06,\;\mathrm{COV}=61.2\%) $$
+$v_{\mathrm{diss}}$ is the dissolution rate [mm/yr] and $b$ the HCO₃⁻/CO₂ concentration ratio,
+limited to 2. The result is limited to the range from 4.5 to $\mathrm{pH}_{\mathrm{bulk}}$.
+
+### Model structural uncertainty
+**[SOURCE: Sun, Zhou & Kang 2021 — 39 crack growth rates from CanmetMATERIALS full-scale tests]**
+
+```math
+\left(\frac{da}{dt}\right)_{\mathrm{real}} = \left(\frac{da}{dt}\right)_{\mathrm{model}}\varepsilon_{\mathrm{model}}, \qquad \varepsilon_{\mathrm{model}} \sim \mathrm{LogNormal}(\mathrm{mean}=1.06,\ \mathrm{COV}=61.2\%)
+```
+
+### ILI probability of detection
+**[ASSUMED: Weibull form]**
+
+```math
+\mathrm{POD}(a) = 1 - \exp\!\left[-\ln(10)\left(\frac{a}{a_{90}}\right)^{k}\right]
+```
+
+$a_{90}$ = 4 mm is the depth with POD = 90%, and $k$ = 2.
 
 ### API 579-1 Level 2 FAD curve
-**[SOURCE: API 579-1/ASME FFS-1 Level 2]**
+**[SOURCE: API 579-1/ASME FFS-1 Level 2, as quoted in Bourga et al. 2016]**
 
-$$ K_r(L_r) \;=\; \bigl(1 + \tfrac{1}{2} L_r^{2}\bigr)^{-1/2}\, \bigl(\,0.3 + 0.7\,e^{-0.65\,L_r^{6}}\bigr) $$
+```math
+K_r = \bigl(1 - 0.14\,L_r^{2}\bigr)\bigl(0.3 + 0.7\,e^{-0.65\,L_r^{6}}\bigr), \qquad L_r \le L_{r,\max} = \frac{1}{2}\left(1 + \frac{\sigma_{\mathrm{UTS}}}{\sigma_{\mathrm{SMYS}}}\right)
+```
 
-### H₂ blending — K_IH degradation
-**[SOURCE: Cui et al. 2024]**
+$K_r = K_I/K_{\mathrm{mat}}$ with $K_{\mathrm{mat}}$ = 70 MPa√m `[ASSUMED]`, and $L_r$ is the hoop
+stress on the remaining wall divided by SMYS.
 
-$$ K_{IH}(x_{\text{H}_2},x_{\text{CO}_2}) \;=\; K_{IH,0}\,\bigl(1 - \alpha_{\text{H}}\,x_{\text{H}_2}^{\,m}\bigr)\,\bigl(1 + \alpha_{\text{CO}_2}\,x_{\text{CO}_2}\bigr)^{-1} $$
+### H₂ blending — $K_{IH}$ degradation
+**[SOURCE: Cui et al. 2024 at 3% and 10% H₂ and 40% CO₂; other table points ASSUMED]**
 
----
+```math
+K_{IH}(x_{\mathrm{H_2}}, x_{\mathrm{CO_2}}) = \frac{K_{IH,0}\;\mathrm{HDF}(x_{\mathrm{H_2}})}{\sqrt{c(x_{\mathrm{CO_2}})}}
+```
+
+$x$ is the mole fraction. HDF and $c$ are interpolated from `H2_BLEND_TABLE` and
+`CO2_SYNERGY_TABLE` in `src/h2_blending.py`; the square root is `[ASSUMED]`, and the result is
+limited to the range from 5 MPa√m to $K_{IH,0}$ = 25 MPa√m.
+
+### Re-inspection interval
+**[ASSUMED cost parameters and PoF limit]**
+
+```math
+\mathcal{C}(T) = \frac{C_{\mathrm{insp}} + \mathrm{PoF}(T)\,\mathrm{CoF}}{T}, \qquad T^{*} = \min\!\left(\arg\min_{T}\,\mathcal{C}(T),\;T_{\mathrm{PoF\,lim}}\right)
+```
+
+$T$ is the interval [yr], $C_{\mathrm{insp}}$ and CoF are costs [USD/km], and
+$T_{\mathrm{PoF\,lim}}$ is the time when PoF reaches the assumed 1% limit. The result is also
+checked against the seven-year reassessment cap in 49 CFR 192 subpart O.
+
+## Quick Start
+
+```bash
+# Clone and install
+git clone https://github.com/felipearocha/integrity-code-series-week10-nnph-scc.git
+cd integrity-code-series-week10-nnph-scc
+pip install -e .[dev]
+
+# Validate
+pytest tests/ -q                          # 219 tests
+python -m validation.benchmarks           # textbook constants
+
+# Reproduce all panels + audit-chained outputs
+python run_all.py
+```
+
+`run_all.py` takes about 1-2 minutes and overwrites the panels in `assets/`. Pixel differences
+are expected across matplotlib versions and fonts.
+
+## Limitations
+
+- **No soil potential solve.** `E_pipe` is an input. The Laplace equation in `docs/equations.html`
+  is background and is not solved here.
+- **Hydrogen diffusion is not coupled.** The Oriani-Fick solver is standalone; crack growth uses
+  the surface concentration.
+- **Xing term is simplified.** In Sun et al. (2021), $n$ is a fitted exponent of the HEDE growth
+  rate, 0.92 for X65 and 0.88 for X52. Here it is applied to a concentration ratio, with the X52
+  value on X65 pipe.
+- **The inspection interval uses a colony damage fraction** from one realisation as PoF. The 1%
+  limit and the cost figures are assumptions, not regulation.
+- **FAD inputs are simplified.** $K_{\mathrm{mat}}$ is assumed, and the HAZ curve in panel (h')
+  uses $K_{IH}$ as a screening toughness.
+- **Standards.** API 579-1 and BS 7910 were not checked against the standards themselves. The FAD
+  curve comes from a published paper that quotes API 579-1. The B31.12 factor `HDF_B31_12` = 0.54
+  is unverified.
+- **Not validated against field data.** Growth is calibrated to one rate, 0.3 mm/yr at a = 2 mm.
+- **Archived release.** The Zenodo v1.0.1 archive predates the physics corrections in the
+  [changelog](CHANGELOG.md).
 
 ## Repository Structure
 
@@ -121,6 +227,7 @@ integrity-code-series-week10-nnph-scc/
 ├── README.md
 ├── conftest.py
 ├── docs/equations.html           LaTeX equations reference (MathJax)
+├── paper/                        Manuscript (paper.md, paper.bib)
 ├── src/
 │   ├── constants.py              All parameters with [SOURCE] tags
 │   ├── hydrogen_diffusion.py     Oriani-Fick PDE + C_H_surface_from_potential
@@ -138,18 +245,16 @@ integrity-code-series-week10-nnph-scc/
 │   ├── audit_chain.py            SHA-256 hash-linked audit log
 │   ├── cp_optimization.py        Non-monotonic CP curve
 │   ├── h2_blending.py            H2 blend K_IH degradation
-│   └── inspection_optimizer.py   RBI re-inspection interval
+│   └── inspection_optimizer.py   Re-inspection interval
 ├── validation/benchmarks.py      Analytical benchmarks
 ├── visualization/
 │   ├── plot_all.py               6 core panels + colony GIF generator
 │   └── plot_advanced.py          3 extended panels (CP, H2, inspection optimizer)
-├── tests/                        215 tests (test_week10.py + test_physics_correctness.py)
+├── tests/                        219 tests (test_week10.py + test_physics_correctness.py)
 ├── assets/figures/               9 panels (300 DPI)
 ├── assets/animations/            Crack colony GIF
 └── assets/audit_chain.json
 ```
-
----
 
 ## New Mechanisms vs v1
 
@@ -158,17 +263,15 @@ integrity-code-series-week10-nnph-scc/
 | Crack growth model | Paris law | Chen-Sutherby-Xing combined parameter | Chen & Sutherby 2007 |
 | Frequency dependence | Linear f | Saturation at f_crit = 10^-3 Hz | Xing et al. |
 | VA loading | Constant amplitude | Type I underload with F_INT=10 [ASSUMED] | Chen lit. via ScienceDirect Topics Ch.30 |
-| Crack dormancy | None | Stage I/II criterion, 95% dormant | Zhao et al. 2017 |
+| Crack dormancy | None | Stage I/II criterion | Zhao et al. 2017 |
 | Microstructure | Uniform | HAZ vs base, K_IH and da/dt different | Beavers et al. 2001 |
-| ILI POD | LogNormal a0 | Post-inspection Weibull rejection sampling | PHMSA TVC |
+| ILI POD | LogNormal a0 | Post-inspection Weibull rejection sampling | [ASSUMED] |
 | Model error | None | LogNormal(1.06, COV=61.2%) per crack | Sun et al. 2021 |
 | Crack tip chemistry | None | Turnbull acidification, pH_tip(c/a) | Turnbull 1993 |
 | Residual stress | None | BS 7910 Annex Q K_I_res at HAZ | BS 7910:2019 |
 | Bayesian update | None | Particle filter posterior from re-ILI | Straub 2004 |
-| 3D crack shape | 1D (a only) | 2D (a, c coupled EDOs) | Newman-Raju 1981 |
-| Coalescence | Independent cracks | BS 7910:2019 Cl.7.3 merging rule | BS 7910:2019 |
-
----
+| 3D crack shape | 1D (a only) | 2D (a, c coupled ODEs) | Newman-Raju 1981 |
+| Coalescence | Independent cracks | BS 7910:2019 merging rule | BS 7910:2019 |
 
 ## Key [ASSUMED] Parameters
 
@@ -182,35 +285,31 @@ integrity-code-series-week10-nnph-scc/
 | a_90 (POD) | 4 mm | Modern EMAT [ASSUMED] |
 | C_H_bulk X65 | 0.02 mol/m³ | Sun et al. 2021 range calibrated |
 
----
-
 ## Escalation Table
 
 | Week | Topic | Key escalation |
 |------|-------|---------------|
-| 8 | CO2 pipeline | Supercritical EOS |
-| 9 | CUI | 3-PDEs, Strang splitting |
-| 10 v1 | NNpHSCC | 4-PDEs, crack colony |
+| 8 | Creep-fatigue | New physics domain, triple coupling, Omega nonlinearity |
+| 9 | CUI | 2 PDEs + Butler-Volmer kinetics, Strang splitting |
+| 10 v1 | NNpHSCC | Crack colony |
 | **10 v2** | **NNpHSCC full-physics** | **+12 mechanisms, Chen-Sutherby-Xing, COV=61.2% epistemic** |
 
----
-
 ## Cybersecurity (STRIDE)
-SHA-256 hash-chain audit for all runs. Sensor integrity checks. GBR surrogate OOD fallback.
 
----
+SHA-256 hash-chain audit for all runs (implemented in `src/audit_chain.py`). Sensor integrity checks
+and a GBR surrogate OOD fallback are deployment recommendations, not implemented here.
 
-## Anti-Hallucination Note
+## Source Confidence Tiers
 
 Every equation and constant carries an explicit `[SOURCE: ...]` or `[ASSUMED]` tag,
 graded by tier:
 
-- **T1 (standard / peer-reviewed paper)** — read directly from a controlled source:
+- **T1 (standard / peer-reviewed paper)** — read from a published source:
   Chen & Sutherby 2007 (combined-parameter crack growth, n = 2.0), Sun, Zhou & Kang
-  2021 JIPR (model error LogNormal mean 1.06, COV = 61.2% from 39 CanmetMATERIALS
-  tests; n_HE = 0.88), Zhao et al. 2017 (>95% sub-mm dormancy), Turnbull 1993
-  (crack-tip acidification), Newman & Raju 1981 (semi-elliptical SIF), BS 7910:2019
-  (Annex Q residual-stress SIF, Cl. 7.3 coalescence), ASME B31G / API 579-1 Level 2
+  2021 JIPR (mean 1.06, COV = 61.2% from 39 crack growth rates in CanmetMATERIALS
+  full-scale tests; n = 0.88 for X52), Zhao et al. 2017 (crack dormancy in Stage I),
+  Turnbull 1993 (crack-tip acidification), Newman & Raju 1981 (semi-elliptical SIF),
+  BS 7910:2019 (Annex Q residual-stress SIF, coalescence), ASME B31G / API 579-1 Level 2
   (failure limit state), Straub 2004 (Bayesian inspection update).
 - **T2 (derived)** — quantities computed from T1 inputs (e.g. `D_eff` from `D_H(T)`
   and trap density, `pH_tip` propagated into `C_H_corrected`, post-inspection `a0`
@@ -226,7 +325,22 @@ The tiers are applied honestly: where a coefficient is an assumption rather than
 codified value it is tagged `[ASSUMED]` (T3) and listed in the "Key [ASSUMED]
 Parameters" table above, not presented as a standard constant.
 
----
+## Integrity Code Series
+
+Part of an ongoing series of physics-first integrity simulators by Felipe Rocha:
+
+| # | Repo | Domain |
+|---|---|---|
+| Week 3 | [integrity-code-series-week3-f1-lap-simulation](https://github.com/felipearocha/integrity-code-series-week3-f1-lap-simulation) | F1 lap simulation (six-state model) |
+| Week 6 | [integrity-code-series-week6-smartphone-galvanic](https://github.com/felipearocha/integrity-code-series-week6-smartphone-galvanic) | Smartphone galvanic corrosion (Laplace + Butler-Volmer) |
+| Week 7 | [integrity-code-series-week7-h2-lferw](https://github.com/felipearocha/integrity-code-series-week7-h2-lferw) | LF-ERW H2 conversion (B31.12 + NACE TM0316) |
+| Week 8 | [integrity-code-series-week8-creep-fatigue-heater](https://github.com/felipearocha/integrity-code-series-week8-creep-fatigue-heater) | Creep-fatigue 9Cr-1Mo (Norton/Omega + Coffin-Manson) |
+| Week 9 | [integrity-code-series-week9-cui](https://github.com/felipearocha/integrity-code-series-week9-cui) | CUI thermohygro-electrochemical (2 PDEs + Butler-Volmer, Strang) |
+| **Week 10** | **[integrity-code-series-week10-nnph-scc](https://github.com/felipearocha/integrity-code-series-week10-nnph-scc)** | **NNpHSCC full-physics (Chen-Sutherby-Xing + BS 7910) — this repo** |
+| Week 11 | [integrity-code-series-week11-erosion-corrosion-multiphase](https://github.com/felipearocha/integrity-code-series-week11-erosion-corrosion-multiphase) | Erosion-corrosion multiphase (NORSOK M-506 + DNV-RP-O501 + G119 + API 579) |
+| Bonus | [Vibration-Accelerated-Corrosion-Coupled-Mechano-Electrochemical-Simulation](https://github.com/felipearocha/Vibration-Accelerated-Corrosion-Coupled-Mechano-Electrochemical-Simulation) | Vibration-accelerated corrosion (SDOF + Butler-Volmer + Archard) |
+| Bonus | [synthetic-integrity-digital-twin-piml](https://github.com/felipearocha/synthetic-integrity-digital-twin-piml) | Physics-informed neural-network surrogate |
+| Bonus | [integrity-data-foundation](https://github.com/felipearocha/integrity-data-foundation) | Engineering data validation baseline |
 
 ## How to Cite
 
@@ -259,8 +373,6 @@ The two DOIs Zenodo provides are:
 | [`10.5281/zenodo.20172242`](https://doi.org/10.5281/zenodo.20172242) (version) | Pinned to v1.0.1 specifically — use when reproducibility matters. |
 
 A machine-readable citation file is also available in [`CITATION.cff`](CITATION.cff) — GitHub will display a "Cite this repository" widget at the top right of the repo page that exports BibTeX / APA / RIS automatically.
-
----
 
 ## Disclaimer
 

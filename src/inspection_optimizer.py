@@ -16,9 +16,10 @@ Decision model:
   PoF(T) : probability of failure at time T
 
 Optimal T* minimises total cost rate. Also finds T_PoF_limit where
-PoF(T) reaches the regulatory limit (typically 10^-4 to 10^-2).
+PoF(T) reaches an assumed limit (POF_LIMIT_ASSUMED).
 
-For NNpHSCC: PHMSA requires maximum 5yr re-assessment for class 3 segments.
+Reassessment cap: at least every seven years [SOURCE: 49 CFR 192 subpart O, as
+described in the class location final rule, FR Doc. 2026-00566].
 """
 import numpy as np
 from scipy.optimize import minimize_scalar
@@ -30,8 +31,9 @@ C_INSP_DEFAULT   = 150_000.0   # $/km  (ILI EMAT crack tool) [ASSUMED]
 COF_LEAK_DEFAULT = 1_000_000.0 # $/km  (leak: repair + environmental) [ASSUMED]
 COF_RUPT_DEFAULT = 10_000_000.0# $/km  (rupture: fatality risk + cleanup) [ASSUMED]
 
-# Regulatory PoF limit for NNpHSCC (PHMSA IMP guidance)
-POF_LIMIT_REGULATORY = 0.01    # 1% per inspection interval [ASSUMED per CEPA guidance]
+# PoF limit per inspection interval. No regulation sets this value.
+POF_LIMIT_ASSUMED = 0.01       # 1% per inspection interval [ASSUMED]
+REASSESS_CAP_YR = 7.0          # [SOURCE: see module docstring]
 
 
 def total_expected_cost_rate(T_yr: float,
@@ -62,7 +64,7 @@ def optimal_inspection_interval(PoF_func: Callable,
                                   CoF: float = COF_RUPT_DEFAULT) -> dict:
     """
     Find T* that minimises total expected cost rate.
-    Also computes T_PoF_limit (when PoF reaches regulatory threshold).
+    Also computes T_PoF_limit (when PoF reaches the assumed limit).
 
     Parameters
     ----------
@@ -87,22 +89,21 @@ def optimal_inspection_interval(PoF_func: Callable,
     cost_arr = np.array([cost_fn(t) for t in T_arr])
     PoF_arr  = np.array([float(np.clip(PoF_func(t), 0, 1)) for t in T_arr])
 
-    # Find T where PoF first exceeds regulatory limit
+    # Find T where PoF first exceeds the assumed limit
     T_pof_limit = T_max_yr
     for i, (t, p) in enumerate(zip(T_arr, PoF_arr)):
-        if p >= POF_LIMIT_REGULATORY:
+        if p >= POF_LIMIT_ASSUMED:
             T_pof_limit = float(t)
             break
 
     # Risk constraint: the interval must not exceed T_pof_limit — you have to
-    # re-inspect before PoF reaches the regulatory limit. Without this cap a
+    # re-inspect before PoF reaches the assumed limit. Without this cap a
     # fast-rising PoF lets the C_insp/T term dominate and pushes the cost optimum
     # to T_max, which is backwards for an aggressive (short-life) segment.
     T_opt = float(min(T_opt_cost, T_pof_limit))
     cost_opt = float(cost_fn(T_opt))
 
-    # PHMSA 5yr limit check
-    phmsa_compliant = T_opt <= 5.0
+    cap_compliant = T_opt <= REASSESS_CAP_YR
 
     return {
         'T_opt_yr': T_opt,
@@ -111,11 +112,11 @@ def optimal_inspection_interval(PoF_func: Callable,
         'T_arr': T_arr,
         'cost_arr': cost_arr,
         'PoF_arr': PoF_arr,
-        'phmsa_5yr_compliant': phmsa_compliant,
+        'reassess_cap_compliant': cap_compliant,
         'C_insp': C_insp, 'CoF': CoF,
-        'regulatory_PoF_limit': POF_LIMIT_REGULATORY,
+        'assumed_PoF_limit': POF_LIMIT_ASSUMED,
         'note': ('Optimal interval minimises C_insp/T + PoF(T)×CoF/T. '
-                 '[ASSUMED] cost parameters. PHMSA class 3 limit: 5 yr. '
+                 '[ASSUMED] cost parameters and PoF limit. Reassessment cap: 7 yr. '
                  '[SOURCE: Li et al. 2018; Abubakirov et al. 2020 DBN approach]'),
     }
 

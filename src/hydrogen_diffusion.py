@@ -1,5 +1,7 @@
 """
-PDE 2: Oriani hydrogen diffusion in pipeline steel wall.
+PDE 2: Oriani hydrogen diffusion in pipeline steel wall. The solver below
+(run_H_diffusion) is standalone; the crack-growth pipeline uses only
+C_H_surface_from_potential.
 
 Governing equation (modified Fick with trapping):
   (1 + K_trap * N_trap / C_L) * dC_L/dt

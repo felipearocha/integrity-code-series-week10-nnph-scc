@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (docs/metadata) - repository audit
+- Corrected the `sun_zhou_kang_2021` reference against Crossref: Sun H., Zhou W., Kang J. (2021), "A review of crack growth models for near-neutral pH stress corrosion cracking on oil and gas pipelines", JIPR 2(1), art. 28, DOI 10.1186/s43065-021-00042-1. The previous title, initial and article number were wrong.
+- Corrected the description of 49 CFR 192.611(a)(4): it is an optional integrity-management alternative for eligible Class 3 segments, not an assessment requirement, and it excludes segments with a leak or rupture history due to cracking.
+- Stopped claiming a Laplace soil-potential solve (none exists; `E_pipe` is an input) and noted that the Oriani-Fick solver is not called by the crack-growth pipeline.
+- `pyproject.toml` and CHANGELOG links now use the current repository slug; removed the "Code style: ruff" badge (the code is not ruff-clean).
+
+- Corrected Zhao 2017 (the DOI pointed to an unrelated paper) and Cui 2024 against Crossref. Dropped API 581, which the code does not use, and the BS 7910 clause number, which could not be verified.
+- README equations now match the code and use GitHub math. Tests: 219.
+
+### Fixed (model)
+- **FAD curve.** The code used the BS 7910 Option 1 prefactor with the API exponent. It now uses the API 579-1 Level 2 curve as quoted by Bourga et al. (2016). `Kr(Lr = 1)` 0.5433 -> 0.5723.
+- **POD.** `a90` was the Weibull scale, so POD(4 mm) was 63.2%, not 90%. POD(4 mm) 63.2% -> 90.0%; Monte Carlo PoF 0.1856 -> 0.1729, P50 0.988 -> 0.951 mm, colony merges 17 -> 19, damage fraction 0.760 -> 0.880, Bayes prior P50 0.839 -> 0.826 mm, posterior P50 1.297 -> 1.282 mm.
+- **Reassessment cap.** The 5-year PHMSA limit had no source; the cap is now seven years (49 CFR 192 subpart O). The 1% PoF limit is labelled assumed.
+- **Panels.** The K_IH crossing depth was hardcoded at 3.3 mm; it is now computed, 4.88 mm. Colony results are labelled damage fraction, not PoF. Panel (k'') no longer claims that higher CoF shortens T*: all four cases give 1.5 yr.
+
+### CI
+- Dependabot: `increase-if-necessary` for pip, one grouped PR for GitHub Actions. Bumped checkout, setup-python and upload-artifact.
+- The ruff step was masked and reported 411 style findings. It now gates on syntax errors and undefined names.
+
 ### Fixed (physics) — second audit pass (headline-path remediation)
 Four blockers and six high-severity findings on the paths that produce the headline numbers; tests raised to **215**.
 
@@ -14,7 +33,7 @@ Four blockers and six high-severity findings on the paths that produce the headl
 - **`K >= K_IH` is no longer treated as rupture.** `K_IH` is the onset threshold for environmental cracking, not a failure criterion; using it as rupture froze active flaws. A flaw is now critical if `a >= 0.80·wall` (leak) **or** net-section plastic collapse via the Folias factor `M_T` **or** `K >= K_IC`. A coalesced (long) flaw fails by collapse at a shallower depth.
 - **CP potential is now wired into the Monte Carlo** via the CGR-vs-potential curve (previously a no-op with identical output at every potential). Time-to-failure is maximised at the -750 mV optimum (~6.6 yr) and shorter at -850 mV NACE (~4.0 yr) and -680 mV free corrosion (~2.0 yr), demonstrating the "-750 mV optimal vs -850 mV NACE" operational claim.
 - **`C_CO2` is now a causal Monte Carlo driver** through crack-tip pH/buffering (was sampled but inert).
-- **Coalescence now fires.** BS 7910:2019 Cl. 7.3 merging engages during colony growth in a clustered colony; it was structurally zero because cracks had been spread over 1000 m.
+- **Coalescence now fires.** BS 7910:2019 merging engages during colony growth in a clustered colony; it was structurally zero because cracks had been spread over 1000 m.
 - **H2 blending K_IH degradation re-anchored on Cui et al. 2024**: `K_IH(3% H2) = 0.765x`, `K_IH(10% H2) = 0.569x`. So 10% H2 gives `K_IH = 14.2 MPa·m^0.5` and MAOP -43% (previously mislabelled 19.1 MPa·m^0.5 / -24%, understating the effect ~3x); 30% H2 -> ~10.0 MPa·m^0.5, -60%; 100% -> ~5.5 MPa·m^0.5, -78%.
 - **Bayesian particle-filter demo is now informative**: prior `a0` P50 ~0.84 mm updates to posterior P50 ~1.30 mm, with ESS dropping 1000 -> 729 -> 407 (was flat / no-op). The panel is now a weighted-histogram posterior density (was a scribble over unsorted particles).
 - **Aged-colony `a0` distribution mean raised to ~1.0 mm** (was 0.5 mm), representing an in-service line whose cracks grew for years, so a realistic active tail exists.
@@ -63,7 +82,7 @@ Model structural uncertainty is unchanged: LogNormal, mean 1.06, COV 61.2%, quan
 - Chen-Sutherby-Xing combined-parameter crack growth law with frequency saturation at `f_crit = 10^-3 Hz`.
 - Newman-Raju 3D semi-elliptical crack geometry (coupled `(a, c)` EDOs).
 - BS 7910:2019 Annex Q residual stress SIF for as-welded HAZ.
-- BS 7910:2019 Cl. 7.3 coalescence rule for adjacent surface cracks.
+- BS 7910:2019 coalescence rule for adjacent surface cracks.
 - Turnbull (1993) crack-tip pH model with Fe2+ hydrolysis and CO2/HCO3- buffering.
 - Non-monotonic CP potential model (minimum CGR at -750 mV CSE).
 - Microstructure zones: base metal, HAZ, vintage X52 base, vintage X52 ERW seam weld.
@@ -83,5 +102,5 @@ Model structural uncertainty is unchanged: LogNormal, mean 1.06, COV 61.2%, quan
 ### Tests
 - 194 / 194 passing on a clean Python 3.11+ extract.
 
-[1.0.1]: https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/releases/tag/v1.0.1
-[1.0.0]: https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/releases/tag/v1.0.0
+[1.0.1]: https://github.com/felipearocha/integrity-code-series-week10-nnph-scc/releases/tag/v1.0.1
+[1.0.0]: https://github.com/felipearocha/integrity-code-series-week10-nnph-scc/releases/tag/v1.0.0

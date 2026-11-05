@@ -14,6 +14,14 @@ from src.constants import (COLOR_NAVY, COLOR_STEEL, COLOR_RED, COLOR_TEAL,
 ICS2_SEQ = LinearSegmentedColormap.from_list(
     "ics2_seq", [COLOR_TEAL, COLOR_STEEL, COLOR_RED])
 
+def a_KIH_mm():
+    """Depth [mm] where K_I reaches K_IH (base metal, c/a = 4), from the SIF solution."""
+    from scipy.optimize import brentq
+    from src.constants import K_IH_BASE_MPa, PIPE_WT
+    from src.crack_growth import K_I_deeppoint
+    return 1e3 * brentq(lambda a: K_I_deeppoint(a, 4 * a) - K_IH_BASE_MPa, 1e-4, 0.95 * PIPE_WT)
+
+
 def _ax(ax):
     ax.spines["top"].set_visible(False); ax.spines["right"].set_visible(False)
     for s in ["left","bottom"]: ax.spines[s].set_linewidth(0.7)
@@ -31,7 +39,7 @@ def plot_crack_3d_evolution(res_base, res_haz, out="assets/figures/panel_ab_crac
     ax=axes[0]
     ax.plot(t,a,color=COLOR_NAVY,linewidth=1.5,label='Base metal (bainitic X65)')
     ax.plot(t_h,a_h,color=COLOR_RED,linewidth=1.5,linestyle='--',label='HAZ (ferrite-pearlite)')
-    ax.axhline(3.3,color=COLOR_TEAL,linewidth=0.8,linestyle=':',label='K_IH base crossing ~3.3 mm')
+    ax.axhline(a_KIH_mm(),color=COLOR_TEAL,linewidth=0.8,linestyle=':',label=f'K_IH base crossing {a_KIH_mm():.1f} mm')
     ax.axhline(1.5,color=COLOR_RED,linewidth=0.7,linestyle=':',alpha=0.6,label='K_IH HAZ crossing ~1.5 mm')
     ax.set_xlabel('Time [yr]',fontsize=10); ax.set_ylabel('Crack depth a [mm]',fontsize=10)
     ax.set_title('(a)  3D Crack Depth a(t)\nBase vs HAZ zone [SOURCE: Beavers et al. 2001]',fontsize=10,fontweight='bold',loc='left')
@@ -139,7 +147,7 @@ def plot_va_loading(out="assets/figures/panel_d_va_loading.png"):
 def plot_mc_full(mc_result, out="assets/figures/panel_e_mc_full.png"):
     os.makedirs(os.path.dirname(out),exist_ok=True)
     from src.monte_carlo import spearman_sensitivity
-    wl=mc_result['wall_loss']; limit=3.3
+    wl=mc_result['wall_loss']; limit=a_KIH_mm()
     rho=spearman_sensitivity(mc_result)
     fig,axes=plt.subplots(1,3,figsize=(18,5),constrained_layout=True)
     fig.patch.set_facecolor("white")
@@ -147,7 +155,6 @@ def plot_mc_full(mc_result, out="assets/figures/panel_e_mc_full.png"):
     # CDF
     ax=axes[0]; s=np.sort(wl); cdf=np.arange(1,len(s)+1)/len(s)
     ax.step(s,cdf,color=COLOR_NAVY,linewidth=1.2,where='post')
-    ax.axvline(limit,color=COLOR_RED,linewidth=0.9,linestyle=':',label='K_IH crossing 3.3 mm')
     for pct,lbl in [(50,'P50'),(90,'P90'),(95,'P95')]:
         v=np.percentile(wl,pct)
         ax.axvline(v,color=COLOR_STEEL,linewidth=0.6,alpha=0.5)
@@ -155,6 +162,7 @@ def plot_mc_full(mc_result, out="assets/figures/panel_e_mc_full.png"):
     ax.set_xlabel('Crack depth at t* = 20 yr [mm]',fontsize=10)
     ax.set_ylabel('CDF [—]',fontsize=10)
     ax.set_title('(e)  Crack Depth CDF — N = 10,000\nPost-ILI POD-corrected a0 + model error ε',fontsize=10,fontweight='bold',loc='left')
+    ax.axvline(limit,color=COLOR_RED,linewidth=0.9,linestyle=':',label=f'K_IH crossing {limit:.1f} mm')
     ax.set_ylim(0,1.05); ax.legend(fontsize=8,frameon=False)
     # Tornado
     ax=axes[1]
@@ -269,11 +277,11 @@ def plot_colony_and_coalescence(colony_result, out="assets/figures/panel_g_colon
     for ax in axes: _ax(ax)
     t=colony_result['t_years']; PoF=colony_result['PoF_t']
     ax=axes[0]
-    ax.plot(t,PoF*100,color=COLOR_RED,linewidth=1.5,label='Colony PoF(t)')
-    ax.set_xlabel('Time [yr]',fontsize=10); ax.set_ylabel('Colony PoF [%]',fontsize=10)
+    ax.plot(t,PoF*100,color=COLOR_RED,linewidth=1.5,label='Colony damage fraction')
+    ax.set_xlabel('Time [yr]',fontsize=10); ax.set_ylabel('Colony damage fraction [%]',fontsize=10)
     n_dorm=colony_result['n_dormant_initial']
     n_tot=colony_result['n_cracks']
-    ax.set_title(f'(g)  Crack Colony PoF\n{n_dorm}/{n_tot} cracks initially dormant ({n_dorm/n_tot:.0%})',fontsize=10,fontweight='bold',loc='left')
+    ax.set_title(f'(g)  Crack Colony Damage Fraction\n{n_dorm}/{n_tot} cracks initially dormant ({n_dorm/n_tot:.0%})',fontsize=10,fontweight='bold',loc='left')
     ax.legend(fontsize=8.5,frameon=False)
 
     # Crack positions before/after coalescence — use real axial coordinates
@@ -297,7 +305,7 @@ def plot_colony_and_coalescence(colony_result, out="assets/figures/panel_g_colon
     ax2.set_xlim(0, PIPE_L)
     ax2.set_xlabel('Axial position [m]',fontsize=10); ax2.set_ylabel('Initial crack depth a₀ [mm]',fontsize=10)
     ax2.set_title("(g')  Colony Spatial Map (axial distribution along PIPE_L = 1 km)\n"
-                  "BS 7910:2019 Cl.7.3 Coalescence Applied",
+                  "BS 7910:2019 Coalescence Applied",
                   fontsize=10,fontweight='bold',loc='left')
 
     # Model error spread
@@ -353,11 +361,11 @@ def plot_bayesian_and_fad(bayesian_result, out="assets/figures/panel_h_bayes_fad
     wl_arr=np.linspace(0,5e-3,100)
     traj_b=fad_trajectory(wl_arr)
     traj_h=fad_trajectory(wl_arr, Kmat=17.5)
-    ax2.plot(traj_b['Lr'],traj_b['Kr'],color=COLOR_TEAL,linewidth=1.3,label='Base metal (K_IH=25)')
-    ax2.plot(traj_h['Lr'],traj_h['Kr'],color=COLOR_RED,linewidth=1.3,linestyle='--',label='HAZ (K_IH=17.5)')
+    ax2.plot(traj_b['Lr'],traj_b['Kr'],color=COLOR_TEAL,linewidth=1.3,label='Base metal (K_mat=70)')
+    ax2.plot(traj_h['Lr'],traj_h['Kr'],color=COLOR_RED,linewidth=1.3,linestyle='--',label='HAZ screening (K_mat=K_IH=17.5) [ASSUMED]')
     ax2.set_xlim(0,Lr_max*1.12); ax2.set_ylim(0,1.10)
     ax2.set_xlabel('Lr = σ_ref/σ_Y [—]',fontsize=10); ax2.set_ylabel('Kr = KI/Kmat [—]',fontsize=10)
-    ax2.set_title("(h')  FAD — Base vs HAZ\nHAZ crosses boundary earlier (lower K_IH)",fontsize=10,fontweight='bold',loc='left')
+    ax2.set_title("(h')  FAD — Base vs HAZ\nHAZ screened with K_mat = K_IH [ASSUMED]",fontsize=10,fontweight='bold',loc='left')
     ax2.legend(fontsize=8.5,frameon=False)
 
     # MAOP comparison
@@ -383,13 +391,13 @@ def animate_crack_colony(colony_result, out="assets/animations/nnph_scc_crack_co
                           fps: int = 7, n_frames: int = 60):
     """
     Animated GIF: colony of NNpHSCC cracks growing along the PIPE_L axial range
-    plus the simultaneous Colony PoF(t) trajectory.
+    plus the simultaneous Colony damage fraction trajectory.
 
     Meets the ICS2 QC Gate-2 GIF standard: >=50 interpolated frames, DPI 150, a
     progress bar, a per-frame time stamp in the suptitle, start/end holds, and an
     ICS2 brand watermark. Top axes: scatter of (axial position x, crack depth a),
     markers grow and turn larger as a crack crosses K_IH, coloured by zone
-    (base/HAZ). Bottom axes: running Colony PoF(t).
+    (base/HAZ). Bottom axes: running Colony damage fraction.
     """
     os.makedirs(os.path.dirname(out), exist_ok=True)
     t_years = np.asarray(colony_result['t_years'], dtype=float)
@@ -406,6 +414,7 @@ def animate_crack_colony(colony_result, out="assets/animations/nnph_scc_crack_co
     t_fine = np.linspace(res_t[0], res_t[-1], n_real)
     a_fine = np.vstack([np.interp(t_fine, res_t, a_traj[i]) for i in range(a_traj.shape[0])])
     pof_fine = np.interp(t_fine, t_years, PoF) * 100.0
+    a_kih = a_KIH_mm()
 
     # Start/end holds for readability: repeat first/last frame so the eye rests
     # (~430 ms start, ~715 ms end at fps=7) while middle frames stay ~143 ms.
@@ -423,7 +432,7 @@ def animate_crack_colony(colony_result, out="assets/animations/nnph_scc_crack_co
     a_max = float(a_fine.max())
     ax_top.set_xlim(0, PIPE_L)
     ax_top.set_ylim(0, max(PIPE_WT*1000*0.6, a_max*1.05))
-    ax_top.axhline(3.3, color=COLOR_RED, linewidth=0.8, linestyle=':')
+    ax_top.axhline(a_KIH_mm(), color=COLOR_RED, linewidth=0.8, linestyle=':')
     ax_top.set_xlabel('Axial position [m]')
     ax_top.set_ylabel('Crack depth a [mm]')
     ax_top.set_title('NNpHSCC Crack Colony — Spatial Growth',
@@ -435,13 +444,13 @@ def animate_crack_colony(colony_result, out="assets/animations/nnph_scc_crack_co
     p_haz = mpatches.Patch(color=COLOR_RED, label='HAZ')
     ax_top.legend(handles=[p_base, p_haz,
                             plt.Line2D([0],[0],color=COLOR_RED,linestyle=':',
-                                       label='K$_{IH}$ ~3.3 mm')],
+                                       label=f'K$_{{IH}}$ {a_KIH_mm():.1f} mm')],
                    fontsize=8, frameon=False, loc='upper right')
 
     ax_bot.set_xlim(0, t_fine[-1])
     ax_bot.set_ylim(0, max(pof_fine.max()*1.1, 5.0))
     ax_bot.set_xlabel('Time [yr]')
-    ax_bot.set_ylabel('Colony PoF [%]')
+    ax_bot.set_ylabel('Colony damage fraction [%]')
     ax_bot.set_title('Colony Probability of Fracture (any crack > K$_{IH}$)',
                       fontsize=10, fontweight='bold', loc='left')
     pof_line, = ax_bot.plot([], [], color=COLOR_RED, linewidth=1.8)
@@ -463,7 +472,7 @@ def animate_crack_colony(colony_result, out="assets/animations/nnph_scc_crack_co
         k = order[display_idx]
         a_now = a_fine[:, k]
         scat.set_offsets(np.column_stack([x, a_now]))
-        scat.set_sizes(np.where(a_now >= 3.3, 110, 40))
+        scat.set_sizes(np.where(a_now >= a_kih, 110, 40))
         pof_line.set_data(t_fine[:k+1], pof_fine[:k+1])
         pof_dot.set_data([t_fine[k]], [pof_fine[k]])
         prog_fg.set_width(k/(n_real-1))
