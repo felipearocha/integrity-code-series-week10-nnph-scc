@@ -108,7 +108,7 @@ $$ \left(\tfrac{da}{dt}\right)_{\!\text{real}} \;=\; \left(\tfrac{da}{dt}\right)
 ### API 579-1 Level 2 FAD curve
 **[SOURCE: API 579-1/ASME FFS-1 Level 2]**
 
-$$ K_r(L_r) \;=\; \bigl(1 + \tfrac{1}{2} L_r^{2}\bigr)^{-1/2}\, \bigl(\,0.3 + 0.7\,e^{-0.65\,L_r^{6}}\bigr) $$
+$$ K_r(L_r) \;=\; \bigl(1 - 0.14\,L_r^{2}\bigr)\, \bigl(\,0.3 + 0.7\,e^{-0.65\,L_r^{6}}\bigr) $$
 
 ### H₂ blending — K_IH degradation
 **[SOURCE: Cui et al. 2024]**

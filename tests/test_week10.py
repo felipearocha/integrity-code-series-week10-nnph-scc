@@ -400,6 +400,18 @@ class TestExtendedPhysicsV2:
         s = train_surrogate(mc["params"], mc["wall_loss"], n_estimators=80, max_depth=4)
         assert s["r2_test"] > -1.0  # at least not anti-predictive
 
+    def test_reassessment_cap_is_seven_years(self):
+        from src.inspection_optimizer import optimal_inspection_interval
+        no_risk = lambda t: 0.0  # cost optimum then sits at T_max
+        assert optimal_inspection_interval(no_risk, T_max_yr=6.0)['reassess_cap_compliant']
+        assert not optimal_inspection_interval(no_risk, T_max_yr=8.0)['reassess_cap_compliant']
+
+    def test_fad_level2_hand_value(self):
+        # Hand calculation at Lr = 1: (1 - 0.14) * (0.3 + 0.7 * exp(-0.65)) = 0.86 * 0.66543 = 0.5723
+        from src.fad_assessment import fad_curve
+        import numpy as np
+        assert abs(fad_curve(np.array([1.0]))[0] - 0.5723) < 1e-3
+
     def test_fad_api579_shape(self):
         from src.fad_assessment import fad_curve, Lr_max_value
         import numpy as np

@@ -353,11 +353,11 @@ def plot_bayesian_and_fad(bayesian_result, out="assets/figures/panel_h_bayes_fad
     wl_arr=np.linspace(0,5e-3,100)
     traj_b=fad_trajectory(wl_arr)
     traj_h=fad_trajectory(wl_arr, Kmat=17.5)
-    ax2.plot(traj_b['Lr'],traj_b['Kr'],color=COLOR_TEAL,linewidth=1.3,label='Base metal (K_IH=25)')
-    ax2.plot(traj_h['Lr'],traj_h['Kr'],color=COLOR_RED,linewidth=1.3,linestyle='--',label='HAZ (K_IH=17.5)')
+    ax2.plot(traj_b['Lr'],traj_b['Kr'],color=COLOR_TEAL,linewidth=1.3,label='Base metal (K_mat=70)')
+    ax2.plot(traj_h['Lr'],traj_h['Kr'],color=COLOR_RED,linewidth=1.3,linestyle='--',label='HAZ screening (K_mat=K_IH=17.5) [ASSUMED]')
     ax2.set_xlim(0,Lr_max*1.12); ax2.set_ylim(0,1.10)
     ax2.set_xlabel('Lr = σ_ref/σ_Y [—]',fontsize=10); ax2.set_ylabel('Kr = KI/Kmat [—]',fontsize=10)
-    ax2.set_title("(h')  FAD — Base vs HAZ\nHAZ crosses boundary earlier (lower K_IH)",fontsize=10,fontweight='bold',loc='left')
+    ax2.set_title("(h')  FAD — Base vs HAZ\nHAZ screened with K_mat = K_IH [ASSUMED]",fontsize=10,fontweight='bold',loc='left')
     ax2.legend(fontsize=8.5,frameon=False)
 
     # MAOP comparison
