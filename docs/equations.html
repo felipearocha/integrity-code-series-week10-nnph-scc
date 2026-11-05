@@ -560,7 +560,7 @@ Optimal interval:
 $$
 T^{*} \;=\; \arg\min_{T\ge T_{\min}}\;\mathcal{C}(T)
 $$
-Regulatory check (PHMSA Class 3): $T_{\text{PoF lim}}$ such that $\operatorname{PoF}(T_{\text{PoF lim}}) = \operatorname{PoF}^{\text{reg}}$; require $T^{*} \le 5\;\text{yr}$ for Class 3.
+Limit check: $T_{\text{PoF lim}}$ such that $\operatorname{PoF}(T_{\text{PoF lim}}) = \operatorname{PoF}^{\text{lim}}$ (assumed 1%); require $T^{*} \le 5\;\text{yr}$ for Class 3.
 <p class="src">SOURCE: Li et al. (2018); Abubakirov et al. (2020) dynamic Bayesian network for re-assessment.</p>
 <p>Code: <span class="code-ref">src/inspection_optimizer.py → optimal_inspection_interval, PoF_from_mc_trajectory</span>.</p>
 </div>

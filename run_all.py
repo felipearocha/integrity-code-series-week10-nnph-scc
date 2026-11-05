@@ -120,7 +120,7 @@ animate_crack_colony(colony)
 print(f"\n{'='*72}")
 print(f"Complete in {time.time()-t_wall:.0f}s")
 n_figs = len(os.listdir("assets/figures"))
-print(f"Panels: {n_figs} | Tests: run `pytest tests/ -q` (215 tests)")
+print(f"Panels: {n_figs} | Tests: run `pytest tests/ -q`")
 print(f"Key mechanisms: Chen-Sutherby-Xing | VA Type I | Dormancy | POD | ε_model | Bayes")
 print(f"{'='*72}")
 
@@ -150,7 +150,7 @@ colony_ext = simulate_colony(E_pipe=E_CP_V, spectrum_type='Type_I', post_ILI=Fal
 PoF_f = interp1d(colony_ext['t_years'], colony_ext['PoF_t'], kind='linear',
                   bounds_error=False, fill_value=(0,colony_ext['PoF_t'][-1]))
 insp_result = optimal_inspection_interval(PoF_f, T_max_yr=20, CoF=1e7)
-print(f"  T*={insp_result['T_opt_yr']:.1f}yr  T_PoF_limit={insp_result['T_pof_limit_yr']:.1f}yr  PHMSA_5yr={insp_result['phmsa_5yr_compliant']}")
+print(f"  T*={insp_result['T_opt_yr']:.1f}yr  T_PoF_limit={insp_result['T_pof_limit_yr']:.1f}yr  within_7yr_cap={insp_result['reassess_cap_compliant']}")
 
 # Extended visualizations
 print("[ext-4] Generating extended panels...")
