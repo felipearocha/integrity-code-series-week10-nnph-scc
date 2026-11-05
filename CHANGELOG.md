@@ -13,8 +13,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stopped claiming a Laplace soil-potential solve (none exists; `E_pipe` is an input) and noted that the Oriani-Fick solver is not called by the crack-growth pipeline.
 - `pyproject.toml` and CHANGELOG links now use the current repository slug; removed the "Code style: ruff" badge (the code is not ruff-clean).
 
+- Corrected Zhao 2017 (the DOI pointed to an unrelated paper) and Cui 2024 against Crossref. Dropped API 581, which the code does not use, and the BS 7910 clause number, which could not be verified.
+- README equations now match the code and use GitHub math. Tests: 219.
+
+### Fixed (model)
+- **FAD curve.** The code used the BS 7910 Option 1 prefactor with the API exponent. It now uses the API 579-1 Level 2 curve as quoted by Bourga et al. (2016). `Kr(Lr = 1)` 0.5433 -> 0.5723.
+- **POD.** `a90` was the Weibull scale, so POD(4 mm) was 63.2%, not 90%. POD(4 mm) 63.2% -> 90.0%; Monte Carlo PoF 0.1856 -> 0.1729, P50 0.988 -> 0.951 mm, colony merges 17 -> 19, damage fraction 0.760 -> 0.880, Bayes prior P50 0.839 -> 0.826 mm, posterior P50 1.297 -> 1.282 mm.
+- **Reassessment cap.** The 5-year PHMSA limit had no source; the cap is now seven years (49 CFR 192 subpart O). The 1% PoF limit is labelled assumed.
+- **Panels.** The K_IH crossing depth was hardcoded at 3.3 mm; it is now computed, 4.88 mm. Colony results are labelled damage fraction, not PoF. Panel (k'') no longer claims that higher CoF shortens T*: all four cases give 1.5 yr.
+
 ### CI
 - Dependabot: `increase-if-necessary` for pip, one grouped PR for GitHub Actions. Bumped checkout, setup-python and upload-artifact.
+- The ruff step was masked and reported 411 style findings. It now gates on syntax errors and undefined names.
 
 ### Fixed (physics) — second audit pass (headline-path remediation)
 Four blockers and six high-severity findings on the paths that produce the headline numbers; tests raised to **215**.
