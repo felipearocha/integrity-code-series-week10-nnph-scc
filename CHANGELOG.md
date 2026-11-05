@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (docs/metadata) - repository audit
+- Corrected the `sun_zhou_kang_2021` reference against Crossref: Sun H., Zhou W., Kang J. (2021), "A review of crack growth models for near-neutral pH stress corrosion cracking on oil and gas pipelines", JIPR 2(1), art. 28, DOI 10.1186/s43065-021-00042-1. The previous title, initial and article number were wrong.
+- Corrected the description of 49 CFR 192.611(a)(4): it is an optional integrity-management alternative for eligible Class 3 segments, not an assessment requirement, and it excludes segments with a leak or rupture history due to cracking.
+- Stopped claiming a Laplace soil-potential solve (none exists; `E_pipe` is an input) and noted that the Oriani-Fick solver is not called by the crack-growth pipeline.
+- `pyproject.toml` and CHANGELOG links now use the current repository slug; removed the "Code style: ruff" badge (the code is not ruff-clean).
+
+### CI
+- Dependabot: `increase-if-necessary` for pip, one grouped PR for GitHub Actions. Bumped checkout, setup-python and upload-artifact.
+
 ### Fixed (physics) — second audit pass (headline-path remediation)
 Four blockers and six high-severity findings on the paths that produce the headline numbers; tests raised to **215**.
 
@@ -83,5 +92,5 @@ Model structural uncertainty is unchanged: LogNormal, mean 1.06, COV 61.2%, quan
 ### Tests
 - 194 / 194 passing on a clean Python 3.11+ extract.
 
-[1.0.1]: https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/releases/tag/v1.0.1
-[1.0.0]: https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/releases/tag/v1.0.0
+[1.0.1]: https://github.com/felipearocha/integrity-code-series-week10-nnph-scc/releases/tag/v1.0.1
+[1.0.0]: https://github.com/felipearocha/integrity-code-series-week10-nnph-scc/releases/tag/v1.0.0
