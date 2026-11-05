@@ -297,7 +297,7 @@ def plot_colony_and_coalescence(colony_result, out="assets/figures/panel_g_colon
     ax2.set_xlim(0, PIPE_L)
     ax2.set_xlabel('Axial position [m]',fontsize=10); ax2.set_ylabel('Initial crack depth a₀ [mm]',fontsize=10)
     ax2.set_title("(g')  Colony Spatial Map (axial distribution along PIPE_L = 1 km)\n"
-                  "BS 7910:2019 Cl.7.3 Coalescence Applied",
+                  "BS 7910:2019 Coalescence Applied",
                   fontsize=10,fontweight='bold',loc='left')
 
     # Model error spread

@@ -344,7 +344,7 @@ A base-metal flaw only reaches $K_{IH}$ near ~5 mm depth, so sub-millimetre flaw
 <p>Code: <span class="code-ref">src/crack_growth.py → crack_is_dormant</span>.</p>
 </div>
 
-<h3>4.2 BS 7910:2019 Cl. 7.3 — coalescence rule</h3>
+<h3>4.2 BS 7910:2019 — coalescence rule</h3>
 <div class="eq-card">
 Two coplanar surface cracks are merged into one if the inter-crack gap $s$ is less than the smaller crack depth:
 $$
@@ -357,7 +357,7 @@ x_{\text{new}} = \tfrac{1}{2}(x_i + x_j),\quad
 c_{\text{new}} = \tfrac{1}{2}\bigl(|x_i-x_j| + c_i + c_j\bigr),\quad
 a_{\text{new}} = 1.05\,\max(a_i,a_j)
 $$
-<p class="src">SOURCE: BS 7910:2019 Clause 7.3 (interaction and re-characterisation of coplanar flaws).</p>
+<p class="src">SOURCE: BS 7910:2019 (interaction and re-characterisation of coplanar flaws).</p>
 <p>Code: <span class="code-ref">src/crack_colony.py → bs7910_coalescence_check</span>.</p>
 </div>
 
@@ -560,7 +560,7 @@ Optimal interval:
 $$
 T^{*} \;=\; \arg\min_{T\ge T_{\min}}\;\mathcal{C}(T)
 $$
-Limit check: $T_{\text{PoF lim}}$ such that $\operatorname{PoF}(T_{\text{PoF lim}}) = \operatorname{PoF}^{\text{lim}}$ (assumed 1%); require $T^{*} \le 5\;\text{yr}$ for Class 3.
+Limit check: $T_{\text{PoF lim}}$ such that $\operatorname{PoF}(T_{\text{PoF lim}}) = \operatorname{PoF}^{\text{lim}}$ (assumed 1%); require $T^{*} \le 7\;\text{yr}$ (reassessment cap).
 <p class="src">SOURCE: Li et al. (2018); Abubakirov et al. (2020) dynamic Bayesian network for re-assessment.</p>
 <p>Code: <span class="code-ref">src/inspection_optimizer.py → optimal_inspection_interval, PoF_from_mc_trajectory</span>.</p>
 </div>

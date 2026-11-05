@@ -38,7 +38,7 @@ and Type-I underload variable-amplitude interaction
 Newman–Raju semi-elliptical surface flaw integrating two coupled ODEs for the
 deepest and surface points [@newman_raju_1981]. Residual stress at the heat-affected
 zone follows BS 7910:2019 Annex Q, and adjacent flaws are merged using the
-BS 7910:2019 Cl. 7.3 coalescence rule [@bs7910_2019]. Crack-tip pH is corrected
+BS 7910:2019 coalescence rule [@bs7910_2019]. Crack-tip pH is corrected
 using the @turnbull_1993 acidification model, and the @zhao_2017 Stage-I dormancy
 criterion separates dormant from propagating colonies. Latin Hypercube Monte Carlo
 sampling propagates eight uncertain parameters and — critically — samples the
@@ -46,7 +46,7 @@ sampling propagates eight uncertain parameters and — critically — samples th
 COV = 61.2 %) as an explicit epistemic variable rather than a footnote.
 A Straub-style particle filter [@straub_2004] performs Bayesian posterior updates
 from in-line inspection events, and a SHA-256 hash-chained audit log records every
-run for traceability. The package ships with 215 automated tests, a CI workflow,
+run for traceability. The package ships with automated tests, a CI workflow,
 analytical benchmarks against textbook constants, and a Zenodo-archived release
 [@rocha_zenodo_2026].
 
@@ -88,8 +88,8 @@ alternative crack-growth laws, hydrogen-diffusion models or POD curves and
 compare the integrated outcome on identical Monte Carlo seeds. Graduate students
 in corrosion and fracture mechanics can use the LaTeX equation reference in
 `docs/equations.html`, the analytical benchmarks in `validation/benchmarks.py`, and
-the 215 unit tests as a worked example of how the standards (BS 7910:2019,
-API 579-1, API 571, NACE TM0316) compose into an end-to-end integrity model.
+the unit tests as a worked example of how BS 7910:2019 and API 579-1 methods
+compose into an end-to-end integrity model.
 
 # Acknowledgements
 

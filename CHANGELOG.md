@@ -23,7 +23,7 @@ Four blockers and six high-severity findings on the paths that produce the headl
 - **`K >= K_IH` is no longer treated as rupture.** `K_IH` is the onset threshold for environmental cracking, not a failure criterion; using it as rupture froze active flaws. A flaw is now critical if `a >= 0.80·wall` (leak) **or** net-section plastic collapse via the Folias factor `M_T` **or** `K >= K_IC`. A coalesced (long) flaw fails by collapse at a shallower depth.
 - **CP potential is now wired into the Monte Carlo** via the CGR-vs-potential curve (previously a no-op with identical output at every potential). Time-to-failure is maximised at the -750 mV optimum (~6.6 yr) and shorter at -850 mV NACE (~4.0 yr) and -680 mV free corrosion (~2.0 yr), demonstrating the "-750 mV optimal vs -850 mV NACE" operational claim.
 - **`C_CO2` is now a causal Monte Carlo driver** through crack-tip pH/buffering (was sampled but inert).
-- **Coalescence now fires.** BS 7910:2019 Cl. 7.3 merging engages during colony growth in a clustered colony; it was structurally zero because cracks had been spread over 1000 m.
+- **Coalescence now fires.** BS 7910:2019 merging engages during colony growth in a clustered colony; it was structurally zero because cracks had been spread over 1000 m.
 - **H2 blending K_IH degradation re-anchored on Cui et al. 2024**: `K_IH(3% H2) = 0.765x`, `K_IH(10% H2) = 0.569x`. So 10% H2 gives `K_IH = 14.2 MPa·m^0.5` and MAOP -43% (previously mislabelled 19.1 MPa·m^0.5 / -24%, understating the effect ~3x); 30% H2 -> ~10.0 MPa·m^0.5, -60%; 100% -> ~5.5 MPa·m^0.5, -78%.
 - **Bayesian particle-filter demo is now informative**: prior `a0` P50 ~0.84 mm updates to posterior P50 ~1.30 mm, with ESS dropping 1000 -> 729 -> 407 (was flat / no-op). The panel is now a weighted-histogram posterior density (was a scribble over unsorted particles).
 - **Aged-colony `a0` distribution mean raised to ~1.0 mm** (was 0.5 mm), representing an in-service line whose cracks grew for years, so a realistic active tail exists.
@@ -72,7 +72,7 @@ Model structural uncertainty is unchanged: LogNormal, mean 1.06, COV 61.2%, quan
 - Chen-Sutherby-Xing combined-parameter crack growth law with frequency saturation at `f_crit = 10^-3 Hz`.
 - Newman-Raju 3D semi-elliptical crack geometry (coupled `(a, c)` EDOs).
 - BS 7910:2019 Annex Q residual stress SIF for as-welded HAZ.
-- BS 7910:2019 Cl. 7.3 coalescence rule for adjacent surface cracks.
+- BS 7910:2019 coalescence rule for adjacent surface cracks.
 - Turnbull (1993) crack-tip pH model with Fe2+ hydrolysis and CO2/HCO3- buffering.
 - Non-monotonic CP potential model (minimum CGR at -750 mV CSE).
 - Microstructure zones: base metal, HAZ, vintage X52 base, vintage X52 ERW seam weld.
