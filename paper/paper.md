@@ -29,9 +29,9 @@ reportable incidents on gas transmission pipelines in North America, yet existin
 open-source tools either reduce the problem to a single-equation Paris-law surrogate
 or are wrapped inside proprietary fitness-for-service software. `NNpHSCC Full-Physics`
 is a Python framework that resolves the problem end-to-end as a coupled physical
-system: a Laplace equation for soil electrochemistry with Butler–Volmer boundary
-conditions at coating holidays, an Oriani–Fick hydrogen-diffusion equation with
-trap-corrected effective diffusivity through the steel wall, and the
+system: potential-dependent cathodic hydrogen entry at the pipe surface, an
+Oriani–Fick hydrogen-diffusion module with trap-corrected effective diffusivity
+(standalone, not called by the crack-growth pipeline), and the
 Chen–Sutherby–Xing combined-parameter crack-growth law with frequency saturation
 and Type-I underload variable-amplitude interaction
 [@chen_sutherby_2007; @sun_zhou_kang_2021]. Crack geometry evolves as a
@@ -52,15 +52,17 @@ analytical benchmarks against textbook constants, and a Zenodo-archived release
 
 # Statement of Need
 
-PHMSA §192.611(a)(4), effective March 16, 2026, requires US gas-transmission
-operators to perform integrity assessments when class location changes occur, and
-NNpHSCC is the dominant time-dependent threat that those assessments must address
-in legacy pre-1970s pipelines [@phmsa_2024_192611]. The 2018 Prince George (BC)
+PHMSA §192.611(a)(4), effective March 16, 2026, gives US gas-transmission operators
+an integrity-management alternative for confirming or restoring MAOP on eligible
+Class 3 segments after a class location change, and excludes segments with an
+in-service leak or rupture due to cracking on the segment or on similar pipe within
+5 miles [@phmsa_2024_192611]. Crack threats therefore bear directly on whether that
+alternative can be used. The 2018 Prince George (BC)
 914 mm rupture and the 2015 Unityville (PA) 609 mm rupture were both attributed
 to NNpHSCC, and both occurred downstream of compressor stations where pressure
 spectra produce exactly the variable-amplitude underload conditions captured by
-the Chen–Sutherby model [@sun_zhou_kang_2021]. Operators preparing §192.611
-assessments need a transparent physics-based tool that (i) implements the most
+the Chen–Sutherby model [@sun_zhou_kang_2021]. Operators evaluating crack threats
+on such segments need a transparent physics-based tool that (i) implements the most
 predictive crack-growth law currently available rather than a calibrated Paris
 fit, (ii) propagates the substantial epistemic error of that law to the integrity
 decision, and (iii) supports Bayesian re-inspection planning under the resulting

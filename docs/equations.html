@@ -191,7 +191,7 @@ i_{\text{BV}}(\phi_s) \;=\; -\,i_0\!\left[
 \qquad \eta = \phi_s - E_{\text{free}}
 $$
 <p class="src">SOURCE: Brichau &amp; Deconinck (1994) <em>Corrosion</em> 50(1):39–47.</p>
-<p>Code: <span class="code-ref">src/hydrogen_diffusion.py → C_H_surface_from_potential</span> uses the holiday potential as boundary condition for H entry.</p>
+<p>Code: this equation is background and is not solved in the package. The pipe-to-soil potential <code>E_pipe</code> is an input; <span class="code-ref">src/hydrogen_diffusion.py → C_H_surface_from_potential</span> maps it to H entry.</p>
 <div class="params">
   <table>
     <tr><th>Symbol</th><th>Meaning</th><th>Code constant</th></tr>
@@ -219,7 +219,7 @@ C_L(r_{\text{inner}},t) \;=\; C_H(E_{\text{pipe}},\,\text{pH})\quad\text{(Langmu
 \left.\frac{\partial C_L}{\partial r}\right|_{r_{\text{outer}}} = 0\quad\text{(Devanathan no-flux)}
 $$
 <p class="src">SOURCE: Kiuchi &amp; McLellan (1983) <em>Acta Metallurgica</em>; Turnbull (1996) on grain-boundary trap density; San Marchi (2012) on $K_{\text{trap}}$.</p>
-<p>Code: <span class="code-ref">src/hydrogen_diffusion.py → D_H, D_eff, C_H_surface_from_potential</span>; discretised via Crank–Nicolson scheme.</p>
+<p>Code: <span class="code-ref">src/hydrogen_diffusion.py → D_H, D_eff, run_H_diffusion</span>; discretised via Crank–Nicolson scheme. Standalone module: the crack-growth pipeline uses the surface value from <span class="code-ref">C_H_surface_from_potential</span> and does not call this solver.</p>
 </div>
 
 <h3>1.3 Chen–Sutherby–Xing crack growth PDE</h3>

@@ -4,7 +4,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![Tests: 215 passing](https://img.shields.io/badge/tests-215%20passing-brightgreen.svg)](tests)
-[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20172241.svg)](https://doi.org/10.5281/zenodo.20172241)
 
 **Author:** Felipe Rocha — Independent Researcher
@@ -53,8 +52,11 @@ motivate this package:
 - **2018 Prince George, BC rupture** — 914mm gas pipeline; NNpHSCC; downstream of a compressor station (Transportation Safety Board of Canada investigation)
 - **2015 Unityville, PA rupture** — 609mm gas pipeline; NNpHSCC (US DOT/PHMSA failure investigation)
 
-PHMSA §192.611(a)(4) (effective March 16, 2026) requires integrity assessment for class location
-changes. This package provides the physics foundation for that assessment.
+PHMSA §192.611(a)(4) (effective March 16, 2026) adds an integrity-management alternative for
+confirming or restoring MAOP on eligible Class 3 segments after a class location change. Segments
+with an in-service leak or rupture due to cracking on the segment, or on similar pipe within
+5 miles, are excluded, so crack threats bear directly on its use. This package provides physics
+background for evaluating that threat; it is not a compliance determination.
 
 **Key finding from v2:** Even the best available NNpHSCC crack growth model has COV = 61.2% on
 validated full-scale test data. This package explicitly incorporates that model structural
@@ -83,6 +85,10 @@ $$ \Phi_{\text{HE}}(C_H) \;=\; \Bigl(\tfrac{C_H^{\,\text{bulk}}}{C_H^{\,\text{re
 **[SOURCE: Kiuchi & McLellan 1983; Turnbull 1996; San Marchi 2012]**
 
 $$ \frac{\partial C_L}{\partial t} \;=\; D_{\text{eff}}(T,\sigma_h)\,\frac{\partial^{2} C_L}{\partial r^{2}} + \frac{D_{\text{eff}}\,V_H}{R\,T}\,\frac{\partial}{\partial r}\!\Bigl(C_L\,\frac{\partial \sigma_h}{\partial r}\Bigr) $$
+
+Implemented in `src/hydrogen_diffusion.py` (`run_H_diffusion`) as a standalone module. The
+crack-growth pipeline uses the surface value from `C_H_surface_from_potential` and does not call
+this solver.
 
 ### Stress Intensity Factor — Newman-Raju surface crack
 **[SOURCE: Newman & Raju 1981]**
@@ -121,6 +127,7 @@ integrity-code-series-week10-nnph-scc/
 ├── README.md
 ├── conftest.py
 ├── docs/equations.html           LaTeX equations reference (MathJax)
+├── paper/                        Manuscript (paper.md, paper.bib)
 ├── src/
 │   ├── constants.py              All parameters with [SOURCE] tags
 │   ├── hydrogen_diffusion.py     Oriani-Fick PDE + C_H_surface_from_potential
@@ -165,7 +172,7 @@ integrity-code-series-week10-nnph-scc/
 | Crack tip chemistry | None | Turnbull acidification, pH_tip(c/a) | Turnbull 1993 |
 | Residual stress | None | BS 7910 Annex Q K_I_res at HAZ | BS 7910:2019 |
 | Bayesian update | None | Particle filter posterior from re-ILI | Straub 2004 |
-| 3D crack shape | 1D (a only) | 2D (a, c coupled EDOs) | Newman-Raju 1981 |
+| 3D crack shape | 1D (a only) | 2D (a, c coupled ODEs) | Newman-Raju 1981 |
 | Coalescence | Independent cracks | BS 7910:2019 Cl.7.3 merging rule | BS 7910:2019 |
 
 ---
@@ -188,7 +195,7 @@ integrity-code-series-week10-nnph-scc/
 
 | Week | Topic | Key escalation |
 |------|-------|---------------|
-| 8 | CO2 pipeline | Supercritical EOS |
+| 8 | Creep-fatigue | New physics domain, triple coupling, Omega nonlinearity |
 | 9 | CUI | 3-PDEs, Strang splitting |
 | 10 v1 | NNpHSCC | 4-PDEs, crack colony |
 | **10 v2** | **NNpHSCC full-physics** | **+12 mechanisms, Chen-Sutherby-Xing, COV=61.2% epistemic** |
@@ -196,7 +203,8 @@ integrity-code-series-week10-nnph-scc/
 ---
 
 ## Cybersecurity (STRIDE)
-SHA-256 hash-chain audit for all runs. Sensor integrity checks. GBR surrogate OOD fallback.
+SHA-256 hash-chain audit for all runs (implemented in `src/audit_chain.py`). Sensor integrity checks
+and a GBR surrogate OOD fallback are deployment recommendations, not implemented here.
 
 ---
 
