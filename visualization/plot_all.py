@@ -6,7 +6,7 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from matplotlib.colors import LinearSegmentedColormap
 from src.constants import (COLOR_NAVY, COLOR_STEEL, COLOR_RED, COLOR_TEAL,
                             COLOR_CHARCOAL,
-                            PIPE_WT, PIPE_L, K_IH_BASE_MPa, K_IH_HAZ_MPa,
+                            PIPE_WT, K_IH_BASE_MPa, K_IH_HAZ_MPa,
                             K_TH_STAGE2)
 
 # ICS2-palette sequential map for continuous fields (e.g. model error):
@@ -20,6 +20,25 @@ def a_KIH_mm():
     from src.constants import K_IH_BASE_MPa, PIPE_WT
     from src.crack_growth import K_I_deeppoint
     return 1e3 * brentq(lambda a: K_I_deeppoint(a, 4 * a) - K_IH_BASE_MPa, 1e-4, 0.95 * PIPE_WT)
+
+
+def a_KIH_haz_mm():
+    """Depth [mm] where K_I (with weld residual stress) reaches K_IH in the HAZ, c/a = 4."""
+    from scipy.optimize import brentq
+    from src.crack_growth import K_I_deeppoint, K_I_residual
+    return 1e3 * brentq(lambda a: K_I_deeppoint(a, 4 * a) + K_I_residual(a) - K_IH_HAZ_MPa,
+                        1e-5, 0.95 * PIPE_WT)
+
+
+# Depth cap in crack_shape_evolution: growth stops at 98 % of the wall
+A_CAP_MM = PIPE_WT * 0.98 * 1000
+
+
+def _colony_span_m(colony_result):
+    """Axial extent [m] of the simulated colony, with a 5 % margin."""
+    x_all=np.concatenate([np.asarray(colony_result['x']),
+                          np.asarray(colony_result['x_after_coalescence'])])
+    return 1.05*float(x_all.max())
 
 
 def _ax(ax):
@@ -39,14 +58,23 @@ def plot_crack_3d_evolution(res_base, res_haz, out="assets/figures/panel_ab_crac
     ax=axes[0]
     ax.plot(t,a,color=COLOR_NAVY,linewidth=1.5,label='Base metal (bainitic X65)')
     ax.plot(t_h,a_h,color=COLOR_RED,linewidth=1.5,linestyle='--',label='HAZ (ferrite-pearlite)')
-    ax.axhline(a_KIH_mm(),color=COLOR_TEAL,linewidth=0.8,linestyle=':',label=f'K_IH base crossing {a_KIH_mm():.1f} mm')
-    ax.axhline(1.5,color=COLOR_RED,linewidth=0.7,linestyle=':',alpha=0.6,label='K_IH HAZ crossing ~1.5 mm')
+    ax.axhline(a_KIH_mm(),color=COLOR_TEAL,linewidth=0.8,linestyle=':',label=f'K$_{{IH}}$ base crossing {a_KIH_mm():.1f} mm')
+    ax.axhline(a_KIH_haz_mm(),color=COLOR_RED,linewidth=0.7,linestyle=':',alpha=0.6,
+               label=f'K$_{{IH}}$ HAZ crossing {a_KIH_haz_mm():.1f} mm (with residual stress)')
+    ax.axhline(A_CAP_MM,color=COLOR_CHARCOAL,linewidth=0.8,linestyle='-.',alpha=0.7,
+               label=f'Depth cap 0.98·t = {A_CAP_MM:.2f} mm (growth stops)')
+    ft=res_haz['fracture_time_yr']
+    if np.isfinite(ft):
+        ax.annotate(f'HAZ reaches the cap; flaw critical\nat t = {ft:.2f} yr, curve frozen after',
+                    (ft, A_CAP_MM), xytext=(ft+1.5, A_CAP_MM*0.80), fontsize=8, color=COLOR_RED,
+                    arrowprops=dict(arrowstyle='->', color=COLOR_RED, lw=0.7))
+    ax.set_ylim(0, A_CAP_MM*1.08)
     ax.set_xlabel('Time [yr]',fontsize=10); ax.set_ylabel('Crack depth a [mm]',fontsize=10)
     ax.set_title('(a)  3D Crack Depth a(t)\nBase vs HAZ zone [SOURCE: Beavers et al. 2001]',fontsize=10,fontweight='bold',loc='left')
-    ax.legend(fontsize=8,frameon=False)
+    ax.legend(fontsize=8,frameon=False,loc='center right')
     # Panel b: aspect ratio c/a
     ax=axes[1]
-    ax.plot(t, c/a,color=COLOR_NAVY,linewidth=1.5,label='Base (a/c coupled EDOs)')
+    ax.plot(t, c/a,color=COLOR_NAVY,linewidth=1.5,label='Base (a/c coupled ODEs)')
     ax.plot(t_h,c_h/a_h,color=COLOR_RED,linewidth=1.5,linestyle='--',label='HAZ')
     ax.set_xlabel('Time [yr]',fontsize=10); ax.set_ylabel('Crack aspect ratio c/a [—]',fontsize=10)
     ax.set_title('(b)  Crack Shape Evolution c/a\n[SOURCE: Newman-Raju 1981]',fontsize=10,fontweight='bold',loc='left')
@@ -73,17 +101,18 @@ def plot_crack_3d_evolution(res_base, res_haz, out="assets/figures/panel_ab_crac
     ax.set_title('(c)  K$_I$(t) vs Dormancy & Fracture Thresholds\n'
                  '[SOURCE: Zhao et al. 2017; BS 7910:2019]',
                  fontsize=10,fontweight='bold',loc='left')
-    ax.set_ylim(0,max(K_IH_BASE_MPa*1.1, float(np.max(KI_b)*1.05)))
-    ax.legend(fontsize=7.5,frameon=False,loc='upper left')
+    # Show the whole HAZ curve; it is flat after the flaw goes critical (growth stopped)
+    ax.set_ylim(0,max(K_IH_BASE_MPa*1.1, float(np.max(KI_b)*1.05), float(np.max(KI_h)*1.08)))
+    ax.legend(fontsize=7.5,frameon=False,loc='center right',bbox_to_anchor=(1.0,0.72))
     plt.savefig(out,dpi=300,bbox_inches='tight',facecolor='white')
     plt.close(fig); print(f'Saved: {out}')
 
 def plot_va_loading(out="assets/figures/panel_d_va_loading.png"):
     """Panel d: variable amplitude loading spectrum and da/dt comparison."""
     os.makedirs(os.path.dirname(out),exist_ok=True)
-    from src.pressure_spectrum import PressureSpectrum, da_dN_Chen_Xing
+    from src.pressure_spectrum import PressureSpectrum, da_dN_Chen_Xing, da_dt_variable_amplitude
     from src.crack_growth import K_I_deeppoint, delta_K
-    from src.constants import C_H_BULK_X65, P_OP_BAR, F_INT_UNDERLOAD
+    from src.constants import C_H_BULK_X65, P_OP_BAR
 
     fig,axes=plt.subplots(1,2,figsize=(13,5),constrained_layout=True)
     fig.patch.set_facecolor("white")
@@ -91,33 +120,31 @@ def plot_va_loading(out="assets/figures/panel_d_va_loading.png"):
 
     # Left: da/dt vs crack depth for 3 spectrum types
     ax=axes[0]
+    # Same rate law the integrator uses (da_dt_variable_amplitude), base metal, c/a = 4
     a_vals = np.linspace(0.5e-3, 6e-3, 60)
-    for sp_type, col, lbl in [("Type_I",COLOR_RED,"Type I (underload, downstream compressor)"),
-                                ("Type_II",COLOR_NAVY,"Type II (constant amplitude, mid-pipe)"),
-                                ("Type_III",COLOR_TEAL,"Type III (mixed VA)")]:
+    curves = {}
+    for sp_type, col, ls, lbl in [("Type_I",COLOR_RED,'-',"Type I (underload, downstream compressor)"),
+                                    ("Type_II",COLOR_NAVY,'--',"Type II (constant amplitude, mid-pipe)"),
+                                    ("Type_III",COLOR_TEAL,':',"Type III (mixed VA)")]:
         sp = PressureSpectrum(sp_type)
-        da_dt_arr = []
-        for a in a_vals:
-            c = a * 4
-            K_max = K_I_deeppoint(a, c, P_OP_BAR)
-            dK = delta_K(a, c, P_OP_BAR, 0.55)
-            da_dN = da_dN_Chen_Xing(a, K_max, dK, sp.f_major, C_H_BULK_X65)
-            da_dN_min = da_dN_Chen_Xing(a, K_max, dK*0.1, sp.f_minor, C_H_BULK_X65)
-            if sp_type == "Type_I":
-                da_dt = sp.f_major * da_dN + sp.f_minor * da_dN_min * F_INT_UNDERLOAD
-            elif sp_type == "Type_II":
-                da_dt = sp.f_major * da_dN
-            else:
-                da_dt = 0.5*(sp.f_major*da_dN + sp.f_minor*da_dN_min*F_INT_UNDERLOAD) + 0.5*sp.f_major*da_dN
-            da_dt_arr.append(da_dt * 1e3 * 365.25*24*3600)
-        ax.semilogy(a_vals*1000, da_dt_arr, color=col, linewidth=1.4, label=lbl)
+        da_dt_arr = np.array([da_dt_variable_amplitude(
+            a, sp, C_H_BULK_X65,
+            K_I_func=lambda am, P, c=4*a: K_I_deeppoint(am, c, P),
+            delta_K_func=lambda am, P, R, c=4*a: delta_K(am, c, P, R),
+            spectrum_type=sp_type) for a in a_vals]) * 1e3 * 365.25*24*3600
+        curves[sp_type] = da_dt_arr
+        ax.semilogy(a_vals*1000, da_dt_arr, color=col, linewidth=1.4, linestyle=ls, label=lbl)
+    ratio = curves["Type_I"] / np.where(curves["Type_II"] > 0, curves["Type_II"], np.nan)
+    r_lo, r_hi = np.nanmin(ratio), np.nanmax(ratio)
+    ax.text(0.98, 0.30, f'Type I / Type II = {r_lo:.2f}'
+            + ('' if r_hi - r_lo < 0.005 else f'–{r_hi:.2f}') + ' over this depth range',
+            transform=ax.transAxes, ha='right', fontsize=8, color=COLOR_CHARCOAL)
     ax.axhline(0.3, color='#888', linewidth=0.8, linestyle='--', alpha=0.7, label='CEPA field obs.: 0.3 mm/yr')
     ax.axhline(0.63, color='#888', linewidth=0.8, linestyle=':', alpha=0.7, label='CEPA field obs.: 0.63 mm/yr')
     ax.axvline(1.0, color=COLOR_CHARCOAL, linewidth=0.7, linestyle='-.',alpha=0.5, label='Stage I/II boundary ~1mm')
     ax.set_xlabel('Crack depth a [mm]',fontsize=10); ax.set_ylabel('da/dt [mm yr$^{-1}$]',fontsize=10)
     ax.set_title('(d)  VA Loading Spectrum Types — da/dt\nType I (underload) vs II (CA) vs III (mixed)',fontsize=10,fontweight='bold',loc='left')
-    ax.legend(fontsize=7.5,frameon=False)
-    ax.set_ylim(1e-5, 100)
+    ax.legend(fontsize=7.5,frameon=False,loc='upper left')
 
     # Right: frequency effect on da/dt at fixed a=2mm
     ax2=axes[1]
@@ -155,15 +182,21 @@ def plot_mc_full(mc_result, out="assets/figures/panel_e_mc_full.png"):
     # CDF
     ax=axes[0]; s=np.sort(wl); cdf=np.arange(1,len(s)+1)/len(s)
     ax.step(s,cdf,color=COLOR_NAVY,linewidth=1.2,where='post')
-    for pct,lbl in [(50,'P50'),(90,'P90'),(95,'P95')]:
+    xmax=float(s.max())
+    for pct,lbl,y in [(50,'P50',0.40),(90,'P90',0.62),(95,'P95',0.70)]:
         v=np.percentile(wl,pct)
         ax.axvline(v,color=COLOR_STEEL,linewidth=0.6,alpha=0.5)
-        ax.text(v+0.01,pct/100-0.07,f'{lbl}\n{v:.2f}',fontsize=7.5,color=COLOR_STEEL,va='top')
+        right=v>0.8*xmax   # keep labels near the right edge inside the axes
+        ax.text(v-0.1 if right else v+0.1,y,f'{lbl} = {v:.2f} mm',fontsize=7.5,color=COLOR_STEEL,
+                va='top',ha='right' if right else 'left')
     ax.set_xlabel('Crack depth at t* = 20 yr [mm]',fontsize=10)
     ax.set_ylabel('CDF [—]',fontsize=10)
-    ax.set_title('(e)  Crack Depth CDF — N = 10,000\nPost-ILI POD-corrected a0 + model error ε',fontsize=10,fontweight='bold',loc='left')
-    ax.axvline(limit,color=COLOR_RED,linewidth=0.9,linestyle=':',label=f'K_IH crossing {limit:.1f} mm')
-    ax.set_ylim(0,1.05); ax.legend(fontsize=8,frameon=False)
+    ax.set_title('(e)  Crack Depth CDF — N = 10,000\nPost-ILI POD-corrected a$_0$ + model error ε',fontsize=10,fontweight='bold',loc='left')
+    ax.axvline(limit,color=COLOR_RED,linewidth=0.9,linestyle=':',label=f'K$_{{IH}}$ crossing {limit:.1f} mm')
+    n_cap=int(np.sum(wl>=A_CAP_MM-1e-6))
+    ax.axvline(A_CAP_MM,color=COLOR_CHARCOAL,linewidth=0.8,linestyle='-.',alpha=0.7,
+               label=f'Depth cap 0.98·t = {A_CAP_MM:.2f} mm ({n_cap/len(wl):.1%} of samples)')
+    ax.set_ylim(0,1.05); ax.legend(fontsize=8,frameon=False,loc='upper left')
     # Tornado
     ax=axes[1]
     names=list(rho.keys()); rhos=list(rho.values())
@@ -172,6 +205,8 @@ def plot_mc_full(mc_result, out="assets/figures/panel_e_mc_full.png"):
     colors=[COLOR_RED if r>0 else COLOR_STEEL for r in rhos]
     bars=ax.barh(names,rhos,color=colors,edgecolor='none',height=0.6)
     ax.axvline(0,color='black',linewidth=0.7)
+    # room for the value labels so negative ones do not run into the tick labels
+    ax.set_xlim(min(min(rhos),0)-0.1, max(max(rhos),0)+0.1)
     for bar,r in zip(bars,rhos):
         ax.text(r+0.008*np.sign(r),bar.get_y()+bar.get_height()/2,
                 f'{r:.3f}',va='center',ha='left' if r>=0 else 'right',fontsize=8)
@@ -248,15 +283,15 @@ def plot_pod_and_chemistry(out="assets/figures/panel_f_pod_chemistry.png"):
         C_H_tip = C_H_entry_corrected(C_H_ref, pH_tip, SOIL_PH)
         enhance[k] = C_H_tip / C_H_ref
     l1, = ax3.plot(ca_vals, delta_pH, color=COLOR_NAVY, linewidth=1.6,
-                    label='Δ_pH = pH$_{bulk}$ − pH$_{tip}$')
+                    label='ΔpH = pH$_{bulk}$ − pH$_{tip}$')
     ax3.set_xscale('log')
     ax3.set_xlabel('Crack aspect ratio c/a [—]', fontsize=10)
-    ax3.set_ylabel('Δ_pH (acidification at tip) [—]', fontsize=10, color=COLOR_NAVY)
+    ax3.set_ylabel('ΔpH (acidification at tip) [—]', fontsize=10, color=COLOR_NAVY)
     ax3.tick_params(axis='y', labelcolor=COLOR_NAVY)
     ax3_twin = ax3.twinx()
     l2, = ax3_twin.plot(ca_vals, enhance, color=COLOR_RED, linewidth=1.6, linestyle='--',
-                        label='C_H enhancement × (Turnbull)')
-    ax3_twin.set_ylabel('C_H_tip / C_H_bulk [—]', fontsize=10, color=COLOR_RED)
+                        label='C$_H$ enhancement (Turnbull)')
+    ax3_twin.set_ylabel('C$_{H,tip}$ / C$_{H,bulk}$ [—]', fontsize=10, color=COLOR_RED)
     ax3_twin.tick_params(axis='y', labelcolor=COLOR_RED)
     ax3_twin.spines['top'].set_visible(False)
     ax3.axvspan(5, 10, alpha=0.08, color=COLOR_TEAL)
@@ -295,16 +330,18 @@ def plot_colony_and_coalescence(colony_result, out="assets/figures/panel_g_colon
     ax2.scatter(x_coal,a_coal,marker='x',s=80,color=COLOR_TEAL,zorder=5,
                 linewidth=1.5,
                 label=f'After BS 7910 coalescence ({colony_result["n_coalesced"]} merges)')
-    p_haz=mpatches.Patch(color=COLOR_RED,label='HAZ zone')
-    p_base=mpatches.Patch(color=COLOR_NAVY,label='Base metal')
+    p_haz=mpatches.Patch(color=COLOR_RED,label='Initial a$_0$, HAZ')
+    p_base=mpatches.Patch(color=COLOR_NAVY,label='Initial a$_0$, base metal')
     ax2.legend(handles=[p_haz,p_base,
                          plt.Line2D([0],[0],marker='x',color=COLOR_TEAL,linestyle='None',
                                     markersize=8,markeredgewidth=1.5,
-                                    label=f'Coalesced ({colony_result["n_coalesced"]} merges)')],
-                fontsize=8,frameon=False,loc='upper right')
-    ax2.set_xlim(0, PIPE_L)
-    ax2.set_xlabel('Axial position [m]',fontsize=10); ax2.set_ylabel('Initial crack depth a₀ [mm]',fontsize=10)
-    ax2.set_title("(g')  Colony Spatial Map (axial distribution along PIPE_L = 1 km)\n"
+                                    label=f'Flaws after coalescence, a at 20 yr ({colony_result["n_coalesced"]} merges)')],
+                fontsize=8,frameon=False,loc='center right')
+    # The colony is one cluster (COLONY_SPACING_M apart), not spread over PIPE_L
+    span=_colony_span_m(colony_result)
+    ax2.set_xlim(0, span)
+    ax2.set_xlabel('Axial position [m]',fontsize=10); ax2.set_ylabel('Crack depth a [mm]',fontsize=10)
+    ax2.set_title(f"(g')  Colony Spatial Map (one cluster, {span:.2f} m axial span)\n"
                   "BS 7910:2019 Coalescence Applied",
                   fontsize=10,fontweight='bold',loc='left')
 
@@ -315,6 +352,9 @@ def plot_colony_and_coalescence(colony_result, out="assets/figures/panel_g_colon
     frac=[r['a'][-1]*1000 for r in colony_result['results']]
     sc3=ax3.scatter(a0,frac,c=eps,cmap=ICS2_SEQ,s=20,alpha=0.8,vmin=0.3,vmax=3.0)
     fig.colorbar(sc3,ax=ax3,fraction=0.046,pad=0.04).set_label('ε_model [—]',fontsize=9)
+    ax3.axhline(A_CAP_MM,color=COLOR_CHARCOAL,linewidth=0.8,linestyle='-.',alpha=0.7,
+                label=f'Depth cap 0.98·t = {A_CAP_MM:.2f} mm')
+    ax3.legend(fontsize=8,frameon=False,loc='center right')
     ax3.set_xlabel('Initial a₀ [mm]',fontsize=10); ax3.set_ylabel('Final a(t=20yr) [mm]',fontsize=10)
     ax3.set_title("(g'')  Model Error Spread per Crack\nEpistemic uncertainty visible in scatter",fontsize=10,fontweight='bold',loc='left')
 
@@ -357,16 +397,26 @@ def plot_bayesian_and_fad(bayesian_result, out="assets/figures/panel_h_bayes_fad
     Kr_line=fad_curve(Lr_line)
     ax2.plot(Lr_line,Kr_line,color=COLOR_NAVY,linewidth=1.5,label='API 579-1 Level 2')
     ax2.axvline(Lr_max,color=COLOR_NAVY,linewidth=0.8,linestyle='--')
-    ax2.fill_between(Lr_line,Kr_line,1.05,alpha=0.07,color=COLOR_RED)
+    ax2.fill_between(Lr_line,Kr_line,1.05,alpha=0.07,color=COLOR_RED,label='Unacceptable region')
     wl_arr=np.linspace(0,5e-3,100)
     traj_b=fad_trajectory(wl_arr)
-    traj_h=fad_trajectory(wl_arr, Kmat=17.5)
-    ax2.plot(traj_b['Lr'],traj_b['Kr'],color=COLOR_TEAL,linewidth=1.3,label='Base metal (K_mat=70)')
-    ax2.plot(traj_h['Lr'],traj_h['Kr'],color=COLOR_RED,linewidth=1.3,linestyle='--',label='HAZ screening (K_mat=K_IH=17.5) [ASSUMED]')
+    traj_h=fad_trajectory(wl_arr, Kmat=K_IH_HAZ_MPa)
+    ax2.plot(traj_b['Lr'],traj_b['Kr'],color=COLOR_TEAL,linewidth=1.3,label='Base metal (K$_{mat}$ = 70 MPa√m), a = 0–5 mm')
+    ax2.plot(traj_h['Lr'],traj_h['Kr'],color=COLOR_RED,linewidth=1.3,linestyle='--',
+             label=f'HAZ screening (K$_{{mat}}$ = K$_{{IH}}$ = {K_IH_HAZ_MPa} MPa√m) [ASSUMED]')
+    # The HAZ path leaves the plotted range; mark where it crosses the FAD
+    bad=np.flatnonzero(traj_h['status']=='unacceptable')
+    if bad.size:
+        k=bad[0]
+        ax2.plot(traj_h['Lr'][k],traj_h['Kr'][k],'o',color=COLOR_RED,ms=5)
+        ax2.annotate(f'HAZ path crosses\nthe FAD at a = {wl_arr[k]*1e3:.2f} mm;\n'
+                     f'K$_r$ = {traj_h["Kr"].max():.1f} at a = 5 mm\n(off scale)',
+                     (traj_h['Lr'][k],traj_h['Kr'][k]),xytext=(0.03,0.50),textcoords='axes fraction',
+                     fontsize=8,color=COLOR_RED,arrowprops=dict(arrowstyle='->',color=COLOR_RED,lw=0.7))
     ax2.set_xlim(0,Lr_max*1.12); ax2.set_ylim(0,1.10)
-    ax2.set_xlabel('Lr = σ_ref/σ_Y [—]',fontsize=10); ax2.set_ylabel('Kr = KI/Kmat [—]',fontsize=10)
-    ax2.set_title("(h')  FAD — Base vs HAZ\nHAZ screened with K_mat = K_IH [ASSUMED]",fontsize=10,fontweight='bold',loc='left')
-    ax2.legend(fontsize=8.5,frameon=False)
+    ax2.set_xlabel('L$_r$ = σ$_{ref}$/σ$_Y$ [—]',fontsize=10); ax2.set_ylabel('K$_r$ = K$_I$/K$_{mat}$ [—]',fontsize=10)
+    ax2.set_title("(h')  FAD — Base vs HAZ\nHAZ screened with K$_{mat}$ = K$_{IH}$ [ASSUMED]",fontsize=10,fontweight='bold',loc='left')
+    ax2.legend(fontsize=8,frameon=False,loc='upper center',bbox_to_anchor=(0.5,-0.14),ncol=2)
 
     # MAOP comparison
     ax3=axes[2]
@@ -390,7 +440,7 @@ def plot_bayesian_and_fad(bayesian_result, out="assets/figures/panel_h_bayes_fad
 def animate_crack_colony(colony_result, out="assets/animations/nnph_scc_crack_colony.gif",
                           fps: int = 7, n_frames: int = 60):
     """
-    Animated GIF: colony of NNpHSCC cracks growing along the PIPE_L axial range
+    Animated GIF: colony of NNpHSCC cracks growing along the colony's axial span
     plus the simultaneous Colony damage fraction trajectory.
 
     Meets the ICS2 QC Gate-2 GIF standard: >=50 interpolated frames, DPI 150, a
@@ -430,9 +480,10 @@ def animate_crack_colony(colony_result, out="assets/animations/nnph_scc_crack_co
     _ax(ax_top); _ax(ax_bot)
 
     a_max = float(a_fine.max())
-    ax_top.set_xlim(0, PIPE_L)
+    ax_top.set_xlim(0, _colony_span_m(colony_result))  # one cluster, not PIPE_L
     ax_top.set_ylim(0, max(PIPE_WT*1000*0.6, a_max*1.05))
     ax_top.axhline(a_KIH_mm(), color=COLOR_RED, linewidth=0.8, linestyle=':')
+    ax_top.axhline(A_CAP_MM, color=COLOR_CHARCOAL, linewidth=0.8, linestyle='-.', alpha=0.7)
     ax_top.set_xlabel('Axial position [m]')
     ax_top.set_ylabel('Crack depth a [mm]')
     ax_top.set_title('NNpHSCC Crack Colony — Spatial Growth',
@@ -444,21 +495,24 @@ def animate_crack_colony(colony_result, out="assets/animations/nnph_scc_crack_co
     p_haz = mpatches.Patch(color=COLOR_RED, label='HAZ')
     ax_top.legend(handles=[p_base, p_haz,
                             plt.Line2D([0],[0],color=COLOR_RED,linestyle=':',
-                                       label=f'K$_{{IH}}$ {a_KIH_mm():.1f} mm')],
-                   fontsize=8, frameon=False, loc='upper right')
+                                       label=f'K$_{{IH}}$ base crossing {a_KIH_mm():.1f} mm'),
+                            plt.Line2D([0],[0],color=COLOR_CHARCOAL,linestyle='-.',
+                                       label=f'Depth cap 0.98·t = {A_CAP_MM:.2f} mm')],
+                   fontsize=8, frameon=False, loc='center right')
 
     ax_bot.set_xlim(0, t_fine[-1])
     ax_bot.set_ylim(0, max(pof_fine.max()*1.1, 5.0))
     ax_bot.set_xlabel('Time [yr]')
     ax_bot.set_ylabel('Colony damage fraction [%]')
-    ax_bot.set_title('Colony Probability of Fracture (any crack > K$_{IH}$)',
+    ax_bot.set_title('Colony damage fraction (share of cracks past the failure limit state)',
                       fontsize=10, fontweight='bold', loc='left')
     pof_line, = ax_bot.plot([], [], color=COLOR_RED, linewidth=1.8)
     pof_dot, = ax_bot.plot([], [], 'o', color=COLOR_RED, markersize=6)
 
-    # Progress bar (thin bottom strip)
+    # Progress bar (thin bottom strip), short enough to clear the watermark
+    PROG_W = 0.62
     ax_prog.set_xlim(0, 1); ax_prog.set_ylim(0, 1); ax_prog.axis('off')
-    ax_prog.add_patch(mpatches.Rectangle((0, 0.25), 1.0, 0.5,
+    ax_prog.add_patch(mpatches.Rectangle((0, 0.25), PROG_W, 0.5,
                        facecolor='#e6e6e6', edgecolor='none'))
     prog_fg = mpatches.Rectangle((0, 0.25), 0.0, 0.5,
                                   facecolor=COLOR_STEEL, edgecolor='none')
@@ -475,7 +529,7 @@ def animate_crack_colony(colony_result, out="assets/animations/nnph_scc_crack_co
         scat.set_sizes(np.where(a_now >= a_kih, 110, 40))
         pof_line.set_data(t_fine[:k+1], pof_fine[:k+1])
         pof_dot.set_data([t_fine[k]], [pof_fine[k]])
-        prog_fg.set_width(k/(n_real-1))
+        prog_fg.set_width(PROG_W*k/(n_real-1))
         fig.suptitle(f'NNpHSCC Crack Colony Evolution   |   t = {t_fine[k]:.1f} yr',
                      fontsize=12, fontweight='bold', color=COLOR_CHARCOAL)
         return scat, pof_line, pof_dot, prog_fg
