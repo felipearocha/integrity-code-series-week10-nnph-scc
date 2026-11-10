@@ -17,11 +17,9 @@ import numpy as np
 from scipy.stats import norm, lognorm, uniform as sp_uni, spearmanr
 from src.constants import (E_CP_V, C_CO2_MOL, A0_MEAN, PIPE_WT, DESIGN_LIFE,
                             P_OP_BAR, SOIL_PH, K_IH_BASE_MPa, K_IH_HAZ_MPa)
-from src.crack_growth import (K_I_deeppoint, K_I_surfacepoint, delta_K,
-                              delta_K_surface, crack_is_dormant, flaw_is_critical,
-                              K_I_residual)
+from src.crack_growth import crack_is_dormant, advance_crack, failure_mode
 from src.cp_optimization import CGR_factor_from_potential
-from src.pressure_spectrum import da_dt_variable_amplitude, PressureSpectrum, da_dN_Chen_Xing
+from src.pressure_spectrum import PressureSpectrum
 from src.model_uncertainty import sample_model_error, MODEL_ERROR_MEAN, MODEL_ERROR_COV
 from src.pod_ilicurve import sample_a0_post_inspection
 from src.microstructure import get_zone_properties
@@ -81,7 +79,13 @@ def _integrate_sample(E_pipe_k, C_CO2_k, a0_mm_k, zone_frac_k, spec_idx_k,
     — NOT at K_IH, which is only the environmental-cracking onset threshold.
     Potential and CO2 both modulate the rate (see below).
 
-    Returns (a_traj_mm[len(t_years)], failed, t_fail_yr).
+    advance_crack sub-steps each interval and stops at the limit-state crossing,
+    so t_fail and the frozen depth are those of the event, not of the next
+    output time (the fixed step used to jump past the 80% wall criterion to the
+    old 0.98*t depth cap).
+
+    Returns (a_traj_mm[len(t_years)], failed, t_fail_yr, mode), mode being
+    'leak', 'collapse', 'brittle' or None.
     """
     zone = 'haz' if zone_frac_k > 0.30 else 'base'
     props = get_zone_properties(zone)
@@ -109,35 +113,28 @@ def _integrate_sample(E_pipe_k, C_CO2_k, a0_mm_k, zone_frac_k, spec_idx_k,
     a_traj = np.empty(n)
     failed = False
     t_fail = np.inf
+    mode = None
 
     for i in range(n):
         a_traj[i] = a * 1000.0
-        if flaw_is_critical(a, c, P_OP_BAR, in_HAZ=in_haz):
-            failed = True
-            t_fail = t_years[i]
-            a_traj[i:] = a * 1000.0   # frozen at failure
+        if i == n - 1:
             break
-        if i < n - 1:
-            dt_s = (t_years[i+1] - t_years[i]) * SEC_PER_YR
-            pH_tip = crack_tip_pH(a, c, SOIL_PH, c_co2=C_CO2_k)
-            C_H_tip = C_H_entry_corrected(C_H_0, pH_tip, SOIL_PH)
-            df = 0.10 if crack_is_dormant(a, c, C_H_tip, P_OP_BAR, K_IH, zone) else 1.0
-            da_dt = da_dt_variable_amplitude(
-                a, spectrum, C_H_for_rate,
-                K_I_func=lambda am, P: K_I_deeppoint(am, c, P)
-                          + (K_I_residual(am) if in_haz else 0.0),
-                delta_K_func=lambda am, P, R: delta_K(am, c, P, R),
-                microstructure_factor=f_micro, model_error=eps_k,
-                interaction_factor=f_int_k, spectrum_type=spectrum.type)
-            dc_dt = da_dt_variable_amplitude(
-                a, spectrum, C_H_for_rate,
-                K_I_func=lambda am, P: K_I_surfacepoint(am, c, P),
-                delta_K_func=lambda am, P, R: delta_K_surface(am, c, P, R),
-                microstructure_factor=f_micro, model_error=eps_k,
-                interaction_factor=f_int_k, spectrum_type=spectrum.type)
-            a = min(a + df * da_dt * dt_s, PIPE_WT * 0.98)
-            c = c + df * dc_dt * dt_s
-    return a_traj, failed, t_fail
+        dt_s = (t_years[i+1] - t_years[i]) * SEC_PER_YR
+        pH_tip = crack_tip_pH(a, c, SOIL_PH, c_co2=C_CO2_k)
+        C_H_tip = C_H_entry_corrected(C_H_0, pH_tip, SOIL_PH)
+        df = 0.10 if crack_is_dormant(a, c, C_H_tip, P_OP_BAR, K_IH, zone) else 1.0
+        a, c, t_event = advance_crack(
+            a, c, spectrum, C_H_for_rate,
+            microstructure_factor=f_micro, model_error=eps_k,
+            dormancy_factor=df, in_haz=in_haz, dt_s=dt_s,
+            interaction_factor=f_int_k)
+        if t_event is not None:
+            failed = True
+            t_fail = t_years[i] + t_event / SEC_PER_YR
+            mode = failure_mode(a, c, P_OP_BAR, in_HAZ=in_haz)
+            a_traj[i+1:] = a * 1000.0   # frozen at the failure depth
+            break
+    return a_traj, failed, t_fail, mode
 
 
 def run_monte_carlo(n_samples=10_000, t_assess_yr=None, n_t=30,
@@ -155,26 +152,25 @@ def run_monte_carlo(n_samples=10_000, t_assess_yr=None, n_t=30,
     t_years = np.linspace(0, t_assess_yr, n_t)
 
     wall_loss_final = np.zeros(n_samples)
-    censored = np.zeros(n_samples, dtype=bool)   # reached the wall thickness
+    mode = np.full(n_samples, "", dtype=object)  # failure mode, "" if none
     failed_by_t = np.zeros((n_samples, n_t), dtype=bool)
 
     for k in range(n_samples):
-        a_traj, failed, t_fail = _integrate_sample(
+        a_traj, failed, t_fail, mode_k = _integrate_sample(
             params["E_pipe"][k], params["C_CO2"][k], params["a0_mm"][k],
             params["zone_HAZ_frac"][k], params["spectrum_idx"][k],
             params["eps_model"][k], params["C_H_mult"][k], params["f_int"][k],
             t_years)
         wall_loss_final[k] = a_traj[-1]
-        if a_traj[-1] >= PIPE_WT * 1000 * 0.98:
-            censored[k] = True
         if failed:
+            mode[k] = mode_k
             # cumulative failure: counts towards PoF at every t >= t_fail
             failed_by_t[k] = t_years >= t_fail
 
-    # PoF(t) = fraction of samples that have reached K_IH (rupture) by time t
+    # PoF(t) = fraction of samples past the limit state (leak / collapse / K_IC) by time t
     PoF_t = failed_by_t.mean(axis=0)
     return {"params": params, "wall_loss": wall_loss_final,
-            "censored": censored, "PoF_t": PoF_t, "t_years": t_years,
+            "failure_mode": mode, "PoF_t": PoF_t, "t_years": t_years,
             "pof_final": float(PoF_t[-1]), "n_samples": n_samples,
             "post_ILI": post_ILI}
 

@@ -3,7 +3,7 @@
 [![CI](https://github.com/felipearocha/integrity-code-series-week10-nnph-scc/actions/workflows/ci.yml/badge.svg)](https://github.com/felipearocha/integrity-code-series-week10-nnph-scc/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
-[![Tests: 219 passing](https://img.shields.io/badge/tests-219%20passing-brightgreen.svg)](tests)
+[![Tests: 221 passing](https://img.shields.io/badge/tests-221%20passing-brightgreen.svg)](tests)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20172241.svg)](https://doi.org/10.5281/zenodo.20172241)
 
 **Author:** Felipe Rocha — Independent Researcher
@@ -41,16 +41,16 @@ From `python run_all.py` (seed 42). The inputs are the nominal and `[ASSUMED]` v
 | Output | Value |
 |---|---|
 | Base metal, $a_0$ = 0.5 mm | 0.510 mm after 20 yr, dormant |
-| HAZ, $a_0$ = 1.5 mm, model error 1.3 | wall penetration at 1.25 yr |
+| HAZ, $a_0$ = 1.5 mm, model error 1.3 | leak (80% of wall, 10.16 mm) at 0.72 yr, before collapse or $K_{IC}$ |
 | Depth where $K_I$ reaches $K_{IH}$ (base metal, c/a = 4) | 4.88 mm |
-| Monte Carlo, N = 10,000, post-ILI | PoF = 0.1729 at 20 yr |
-| Monte Carlo crack depth at 20 yr | P50 = 0.951 mm, P95 = 12.446 mm (the 98% of wall depth cap) |
-| GBR surrogate | $R^2$ = 0.9204, MAE = 0.373 mm |
+| Monte Carlo, N = 10,000, post-ILI | PoF = 0.1821 at 20 yr; every failure is a leak (80% of wall) |
+| Monte Carlo crack depth at 20 yr | P50 = 0.953 mm; P90 = P95 = 10.160 mm, the leak depth at which failed samples stop |
+| GBR surrogate | $R^2$ = 0.9149, MAE = 0.292 mm |
 | Colony, 25 cracks, one realisation | 25/25 dormant at start, 19 merges, damage fraction 0.880 at 20 yr |
 | Bayesian update, two detections | $a_0$ P50 0.826 mm to 1.282 mm, ESS 1000, 723, 400 |
 | Crack growth rate vs potential | 1.0x at -750 mV, 2.0x at -850 mV, 5.0x at free corrosion |
 | $K_{IH}$ at 10% / 30% / 100% H₂ | 14.2 / 10.0 / 5.5 MPa√m |
-| Re-inspection interval $T^{*}$ | 1.5 yr, set by the assumed 1% limit and not by CoF |
+| Re-inspection interval $T^{*}$ | 0.9 yr, set by the assumed 1% limit and not by CoF |
 
 Monte Carlo sensitivity and crack depth distribution:
 
@@ -187,14 +187,14 @@ cd integrity-code-series-week10-nnph-scc
 pip install -e .[dev]
 
 # Validate
-pytest tests/ -q                          # 219 tests
+pytest tests/ -q                          # 221 tests
 python -m validation.benchmarks           # textbook constants
 
 # Reproduce all panels + audit-chained outputs
 python run_all.py
 ```
 
-`run_all.py` takes about 1-2 minutes and overwrites the panels in `assets/`. Pixel differences
+`run_all.py` takes about 2-3 minutes and overwrites the panels in `assets/`. Pixel differences
 are expected across matplotlib versions and fonts.
 
 ## Limitations
@@ -214,6 +214,10 @@ are expected across matplotlib versions and fonts.
   curve comes from a published paper that quotes API 579-1. The B31.12 factor `HDF_B31_12` = 0.54
   is unverified.
 - **Not validated against field data.** Growth is calibrated to one rate, 0.3 mm/yr at a = 2 mm.
+- **Failed samples stop at their failure depth.** Growth is integrated in sub-steps of at most
+  0.2% of the wall (Heun) and stops where the flaw first meets the limit state. The Monte Carlo
+  depths at 10.16 mm are failed samples held at the leak depth, not grown depths, and the
+  Spearman $\rho$ and the surrogate are fitted to that truncated depth.
 - **Archived release.** The Zenodo v1.0.1 archive predates the physics corrections in the
   [changelog](CHANGELOG.md).
 
@@ -250,7 +254,7 @@ integrity-code-series-week10-nnph-scc/
 ├── visualization/
 │   ├── plot_all.py               6 core panels + colony GIF generator
 │   └── plot_advanced.py          3 extended panels (CP, H2, inspection optimizer)
-├── tests/                        219 tests (test_week10.py + test_physics_correctness.py)
+├── tests/                        221 tests (test_week10.py + test_physics_correctness.py)
 ├── assets/figures/               9 panels (300 DPI)
 ├── assets/animations/            Crack colony GIF
 └── assets/audit_chain.json

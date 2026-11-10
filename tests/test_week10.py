@@ -784,7 +784,7 @@ class TestTimestepConvergence:
         # (super-linear), which only proper step-by-step integration produces.
         from src.monte_carlo import _integrate_sample
         t = np.linspace(0, 20, 41)
-        a_traj, failed, t_fail = _integrate_sample(
+        a_traj, failed, t_fail, _ = _integrate_sample(
             -0.85, 0.05, 2.5, 0.0, 0, 1.0, 1.0, 12.0, t)  # aggressive base sample
         grow = np.diff(a_traj)
         grow = grow[grow > 1e-9]                  # pre-fracture growth increments

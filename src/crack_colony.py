@@ -23,7 +23,7 @@ from src.constants import (PIPE_WT, DESIGN_LIFE, C0_MEAN, A0_MEAN, A0_STD,
 from src.pod_ilicurve import sample_a0_post_inspection
 from src.microstructure import get_zone_properties
 from src.model_uncertainty import sample_model_error
-from src.crack_growth import (crack_is_dormant, crack_shape_evolution,
+from src.crack_growth import (crack_is_dormant, advance_crack,
                               flaw_is_critical)
 from src.pressure_spectrum import PressureSpectrum
 from src.hydrogen_diffusion import C_H_surface_from_potential
@@ -177,10 +177,14 @@ def simulate_colony(E_pipe: float = E_CP_V,
             pr = props[zone[j]]
             dormant = crack_is_dormant(a[j], c[j], C_H_surf, P_OP_BAR, pr['K_IH'], zone[j])
             dfac = 0.10 if dormant else 1.0
-            a[j], c[j] = crack_shape_evolution(
+            a[j], c[j], t_event = advance_crack(
                 a[j], c[j], spectrum, pr['C_H_bulk'],
                 microstructure_factor=pr['da_dt_factor'], model_error=eps[j],
                 dormancy_factor=dfac, in_haz=(zone[j] == 'haz'), dt_s=dt_s)
+            if t_event is not None:      # failed inside the step: keep its time
+                for m in members[j]:
+                    if not np.isfinite(failed_time[m]):
+                        failed_time[m] = t + t_event / SEC_PER_YR
         # coalesce flaws that have grown into each other
         a, c, x, zone, eps, members, nm = _coalesce_step(a, c, x, zone, eps, members)
         n_coalesced_total += nm

@@ -76,6 +76,35 @@ class TestFailureCriterion:
         assert K_at_fail < K_IC_AIR, "wall-penetration failure, not brittle K_IC"
 
 
+class TestFailureEventResolved:
+    """The step that crosses the limit state must stop at the crossing.
+
+    With a fixed 0.25 yr step the HAZ baseline jumped from 8.07 mm to the old
+    0.98*t cap (12.45 mm) in one step, past the 80% wall leak criterion, and the
+    failure time depended on the output step (1.25 yr at 80 steps, 0.78 yr at 800).
+    """
+
+    def test_haz_fails_at_leak_depth_independent_of_output_step(self):
+        sp = PressureSpectrum("Type_I")
+        runs = [integrate_full(1.5e-3, 6e-3, sp, lambda t: _C_H_at_cp(), zone='haz',
+                               model_error=1.3, t_end_yr=20, n_steps=n) for n in (80, 800)]
+        leak = A_CRIT_FRAC * PIPE_WT
+        for r in runs:
+            assert r['a'][-1] == pytest.approx(leak, rel=1e-6), (
+                f"depth at failure {r['a'][-1]*1e3:.3f} mm, leak criterion {leak*1e3:.3f} mm")
+        t80, t800 = (r['fracture_time_yr'] for r in runs)
+        assert t80 == pytest.approx(t800, rel=1e-3), (
+            f"failure time depends on the output step: {t80:.4f} vs {t800:.4f} yr")
+
+    def test_monte_carlo_depths_stop_at_leak_criterion(self):
+        from src.monte_carlo import run_monte_carlo
+        mc = run_monte_carlo(n_samples=300, n_t=20, seed=42, post_ILI=True)
+        leak_mm = A_CRIT_FRAC * PIPE_WT * 1e3
+        assert mc['pof_final'] > 0, "need failed samples to check the depth"
+        assert mc['wall_loss'].max() <= leak_mm * (1 + 1e-6), (
+            f"a sample passed the leak criterion: {mc['wall_loss'].max():.3f} mm")
+
+
 class TestDormancyRegime:
     """Dormancy is gated by K_max < K_IH (with a C_H floor), reproducing Zhao 2017."""
 
