@@ -43,15 +43,18 @@ def plot_cp_optimization(out="assets/figures/panel_i_cp_optimization.png"):
 
     ax.text(-0.90, 8, 'OVERPROTECTION\n(excess H₂ gen)', fontsize=8,
             color=COLOR_RED, ha='center', alpha=0.8)
-    ax.text(-0.61, 8, 'UNDER-\nPROTECTION\n(dissolution)', fontsize=8,
+    ax.text(-0.61, 1.3, 'UNDER-\nPROTECTION\n(dissolution)', fontsize=8,
             color=COLOR_STEEL, ha='center', alpha=0.8)
 
+    from src.cp_optimization import CP_FREE_FACTOR
+    ax.axhline(CP_FREE_FACTOR*2, color=COLOR_CHARCOAL, linewidth=0.7, linestyle='-.', alpha=0.6,
+               label=f'Factor cap = {CP_FREE_FACTOR*2:.0f} (flat ends) [ASSUMED]')
     ax.set_xlabel('Pipe-to-soil potential E [V vs CSE]', fontsize=10)
     ax.set_ylabel('CGR factor [—]', fontsize=10)
     ax.set_title('(i)  Non-Monotonic CP Potential vs NNpHSCC CGR\n'
                  '[SOURCE: ScienceDirect — minimum CGR at −750 mV CSE]',
                  fontsize=10, fontweight='bold', loc='left')
-    ax.legend(fontsize=7.5, frameon=False, loc='upper right')
+    ax.legend(fontsize=7.5, frameon=False, loc='upper center', bbox_to_anchor=(0.5, -0.13), ncol=2)
     ax.set_ylim(0.5, 20); ax.set_yscale('log')
 
     # Right: Operational implication — CP voltage vs crack life
@@ -93,19 +96,21 @@ def plot_h2_blending(out="assets/figures/panel_j_h2_blending.png"):
 
     # Panel 1: K_IH vs H2 fraction for different CO2 levels
     ax = axes[0]
-    for x_CO2, col, lbl in [(0.0, COLOR_NAVY, 'x_CO2 = 0 (pure blend)'),
-                              (0.10, COLOR_TEAL, 'x_CO2 = 10%'),
-                              (0.40, COLOR_RED, 'x_CO2 = 40% [SOURCE: Cui 2024]')]:
+    for x_CO2, col, lbl in [(0.0, COLOR_NAVY, 'x$_{CO_2}$ = 0 (pure blend)'),
+                              (0.10, COLOR_TEAL, 'x$_{CO_2}$ = 10%'),
+                              (0.40, COLOR_RED, 'x$_{CO_2}$ = 40% [SOURCE: Cui 2024]')]:
         K_IH_arr = [K_IH_blend(x, x_CO2) for x in x_H2_arr]
         ax.plot(x_H2_arr*100, K_IH_arr, color=col, linewidth=1.4, label=lbl)
 
     ax.axhline(2.2, color=COLOR_CHARCOAL, linewidth=0.8, linestyle='--', alpha=0.6,
-               label='ΔK_th Stage II = 2.2 MPa√m')
+               label='ΔK$_{th}$ Stage II = 2.2 MPa√m')
+    ax.axhline(5.0, color=COLOR_CHARCOAL, linewidth=0.7, linestyle='-.', alpha=0.6,
+               label='K$_{IH}$ floor = 5 MPa√m in K_IH_blend (flat tail)')
     ax.axvline(10, color='#888', linewidth=0.7, linestyle=':', alpha=0.5)
     ax.axvline(30, color='#888', linewidth=0.7, linestyle=':', alpha=0.5)
     ax.set_xlabel('H₂ blend fraction [%]', fontsize=10)
-    ax.set_ylabel('K_IH [MPa√m]', fontsize=10)
-    ax.set_title('(j)  K_IH Degradation with H₂ Blend\n[SOURCE: Cui et al. 2024]',
+    ax.set_ylabel('K$_{IH}$ [MPa√m]', fontsize=10)
+    ax.set_title('(j)  K$_{IH}$ Degradation with H₂ Blend\n[SOURCE: Cui et al. 2024]',
                  fontsize=10, fontweight='bold', loc='left')
     ax.legend(fontsize=8, frameon=False)
 
@@ -123,7 +128,7 @@ def plot_h2_blending(out="assets/figures/panel_j_h2_blending.png"):
     ax2.set_xlabel('H₂ blend fraction [%]', fontsize=10)
     ax2.set_ylabel('MAOP [bar]', fontsize=10)
     ax2.set_title("(j')  MAOP Degradation with H₂ Blend\n"
-                  "B31.12 + K_IH reduction from literature",
+                  "B31.12 + K$_{IH}$ reduction from literature",
                   fontsize=10, fontweight='bold', loc='left')
     ax2.legend(fontsize=8, frameon=False)
 
@@ -141,12 +146,13 @@ def plot_h2_blending(out="assets/figures/panel_j_h2_blending.png"):
     bars = ax3.bar(x_pos, K_IHs, color=colors_bar, edgecolor='none', width=0.6)
     for bar, v, f in zip(bars, K_IHs, da_factors):
         ax3.text(bar.get_x()+bar.get_width()/2, v+0.3,
-                 f'K_IH={v}\n×{f} da/dt', ha='center', fontsize=8,
+                 f'K$_{{IH}}$ = {v}\n×{f} da/dt', ha='center', fontsize=8,
                  color=COLOR_CHARCOAL)
     ax3.axhline(2.2, color=COLOR_CHARCOAL, linewidth=0.8, linestyle='--', alpha=0.6)
     ax3.set_xticks(x_pos); ax3.set_xticklabels(zone_labels, fontsize=8)
-    ax3.set_ylabel('K_IH [MPa√m]', fontsize=10)
-    ax3.set_title("(j'')  Zone K_IH Comparison\n[SOURCE: Beavers 2001; Sun 2024]",
+    ax3.set_ylim(0, max(K_IHs)*1.18)  # headroom for the bar labels
+    ax3.set_ylabel('K$_{IH}$ [MPa√m]', fontsize=10)
+    ax3.set_title("(j'')  Zone K$_{IH}$ Comparison\n[SOURCE: Beavers 2001; Sun 2024]",
                   fontsize=10, fontweight='bold', loc='left')
 
     plt.savefig(out, dpi=300, bbox_inches='tight', facecolor='white')
@@ -173,7 +179,8 @@ def plot_inspection_optimizer(insp_result, mc_result, out="assets/figures/panel_
     ax.semilogy(T_arr, cost_arr, color=COLOR_NAVY, linewidth=2.0, label='Total cost rate')
     ax.semilogy(T_arr, cost_insp, color=COLOR_TEAL, linewidth=1.2, linestyle='--',
                 label='Inspection cost / T')
-    ax.semilogy(T_arr, cost_risk+1, color=COLOR_RED, linewidth=1.2, linestyle=':',
+    # zero risk cost cannot sit on a log axis: leave those points out, do not offset
+    ax.semilogy(T_arr, np.where(cost_risk > 0, cost_risk, np.nan), color=COLOR_RED, linewidth=1.2, linestyle=':',
                 label='Risk cost (PoF×CoF) / T')
     T_opt = insp_result['T_opt_yr']
     ax.axvline(T_opt, color=COLOR_NAVY, linewidth=1.2, linestyle='--',

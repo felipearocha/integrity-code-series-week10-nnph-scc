@@ -22,6 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Reassessment cap.** The 5-year PHMSA limit had no source; the cap is now seven years (49 CFR 192 subpart O). The 1% PoF limit is labelled assumed.
 - **Panels.** The K_IH crossing depth was hardcoded at 3.3 mm; it is now computed, 4.88 mm. Colony results are labelled damage fraction, not PoF. Panel (k'') no longer claims that higher CoF shortens T*: all four cases give 1.5 yr.
 
+### Fixed (figures)
+- Panel (a): the HAZ curve stops at the 0.98·t depth cap (12.45 mm) when the flaw goes critical at 1.25 yr; the cap is now drawn and labelled. The HAZ K_IH crossing was a hardcoded "~1.5 mm"; it is now computed with the weld residual stress, 1.1 mm.
+- Panel (b): "EDOs" -> "ODEs". Panel (c): the HAZ K_I curve left the axes under the legend; the axis now shows it to 46.8 MPa√m.
+- Panel (d): the figure computed its own minor-cycle ΔK (0.1 × major ΔK) instead of calling `da_dt_variable_amplitude`; it now plots the model rate law. Type I / Type II = 1.19 (the old figure showed the three types almost on top of each other).
+- Panels (e), (g''), GIF: the 0.98·t cap is marked (13.9% of Monte Carlo samples sit on it). Panel (g') and the GIF used a 1 km axis for a colony 0.30 m long, and the coalesced flaws (depth at 20 yr) were plotted against an "initial a0" axis; both fixed. The GIF title said "probability of fracture (any crack > K_IH)"; it is the damage fraction of cracks past the failure limit state.
+- Panel (h'): the HAZ path leaves the plot; its FAD crossing (a = 3.03 mm) is marked. Panels (i) and (j): the flat ends are the CGR-factor cap (16) and the K_IH floor (5 MPa√m); both labelled. Panel (k): the risk-cost curve was plotted as cost + 1, which drew a false flat line at 1 $/km/yr; zero values are now left out.
+- Overlapping labels fixed in (e'), (i), (j''); label style made consistent (subscripts).
+
 ### CI
 - Dependabot: `increase-if-necessary` for pip, one grouped PR for GitHub Actions. Bumped checkout, setup-python and upload-artifact.
 - The ruff step was masked and reported 411 style findings. It now gates on syntax errors and undefined names.
@@ -80,7 +88,7 @@ Model structural uncertainty is unchanged: LogNormal, mean 1.06, COV 61.2%, quan
 ### Added
 - Full-physics NNpHSCC simulation package with 15 coupled mechanisms.
 - Chen-Sutherby-Xing combined-parameter crack growth law with frequency saturation at `f_crit = 10^-3 Hz`.
-- Newman-Raju 3D semi-elliptical crack geometry (coupled `(a, c)` EDOs).
+- Newman-Raju 3D semi-elliptical crack geometry (coupled `(a, c)` ODEs).
 - BS 7910:2019 Annex Q residual stress SIF for as-welded HAZ.
 - BS 7910:2019 coalescence rule for adjacent surface cracks.
 - Turnbull (1993) crack-tip pH model with Fe2+ hydrolysis and CO2/HCO3- buffering.

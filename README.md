@@ -54,11 +54,11 @@ From `python run_all.py` (seed 42). The inputs are the nominal and `[ASSUMED]` v
 
 Monte Carlo sensitivity and crack depth distribution:
 
-![Monte Carlo results](assets/figures/panel_e_mc_full.png)
+![Monte Carlo crack depth CDF at 20 years, Spearman sensitivity tornado for eight inputs, and the model-error distribution](assets/figures/panel_e_mc_full.png)
 
 Inspection interval analysis:
 
-![Inspection interval analysis](assets/figures/panel_k_inspection_optimizer.png)
+![Expected cost rate versus re-inspection interval, colony damage fraction over time, and optimal interval for four consequence scenarios](assets/figures/panel_k_inspection_optimizer.png)
 
 All nine panels are in [`assets/figures/`](assets/figures), with the colony animation in
 [`assets/animations/`](assets/animations).
