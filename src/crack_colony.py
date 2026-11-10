@@ -3,7 +3,7 @@ Time-stepped full-physics NNpHSCC crack colony.
 
 The cracks in one colony are clustered over a short axial patch (spacing
 ~COLONY_SPACING_M), grown together step by step, and merged by the BS 7910
-Cl.7.3 coalescence rule *during* growth. A coalesced (longer) flaw carries a
+coalescence rule *during* growth. A coalesced (longer) flaw carries a
 larger Folias bulging factor, so it can rupture by net-section collapse at a
 shallower depth than an isolated flaw — the mechanism that drives real NNpHSCC
 colony failure. Failure of any flaw uses the unified limit state
@@ -13,7 +13,7 @@ Includes:
   - Post-ILI POD-corrected a0 distribution [SOURCE: PHMSA TVC]
   - Dormancy screen K_max < K_IH [SOURCE: Zhao et al. 2017]
   - Microstructure zone assignment (base / HAZ) [SOURCE: Beavers et al.]
-  - BS 7910 coalescence during growth [SOURCE: BS 7910:2019 Cl.7.3]
+  - BS 7910 coalescence during growth [SOURCE: BS 7910:2019]
   - Model structural uncertainty per crack [SOURCE: Sun et al. 2021]
   - 3D crack shape evolution (a, c) [SOURCE: Newman-Raju 1981]
 """
@@ -34,9 +34,9 @@ SEC_PER_YR = 365.25 * 24 * 3600
 
 def bs7910_coalescence_check(a_arr, c_arr, x_arr, t=PIPE_WT):
     """
-    BS 7910:2019 Cl.7.3 coalescence rule: if two coplanar cracks are separated
+    BS 7910:2019 coalescence rule: if two coplanar cracks are separated
     by s < min(a_i, a_j), treat as a single crack of combined size.
-    [SOURCE: BS 7910:2019 Clause 7.3]
+    [SOURCE: BS 7910:2019]
 
     Returns combined (a_eff, c_eff, x_eff) after merging coalesced cracks.
     """
@@ -65,7 +65,7 @@ def bs7910_coalescence_check(a_arr, c_arr, x_arr, t=PIPE_WT):
 
 def _coalesce_step(a, c, x, zone, eps, members):
     """
-    One BS 7910 Cl.7.3 coalescence pass over the current flaw set. Merges any
+    One BS 7910 coalescence pass over the current flaw set. Merges any
     pair whose surface gap < min(a_i, a_j) and repeats until stable. Tracks the
     original-crack membership so per-crack trajectories and PoF stay well defined
     after merges. All list arguments are mutated in place and returned.

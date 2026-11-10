@@ -178,8 +178,8 @@ def plot_inspection_optimizer(insp_result, mc_result, out="assets/figures/panel_
     T_opt = insp_result['T_opt_yr']
     ax.axvline(T_opt, color=COLOR_NAVY, linewidth=1.2, linestyle='--',
                label=f'T* = {T_opt:.1f} yr (optimal)')
-    ax.axvline(5.0, color=COLOR_RED, linewidth=0.9, linestyle=':',
-               label='PHMSA Class 3 limit: 5 yr')
+    ax.axvline(7.0, color=COLOR_RED, linewidth=0.9, linestyle=':',
+               label='7-yr reassessment cap')
     ax.set_xlabel('Re-inspection interval T [yr]', fontsize=10)
     ax.set_ylabel('Expected cost rate [$/km/yr]', fontsize=10)
     ax.set_title('(k)  Risk-Based Inspection Interval Optimization\n'
@@ -191,17 +191,17 @@ def plot_inspection_optimizer(insp_result, mc_result, out="assets/figures/panel_
     ax2 = axes[1]
     t_mc = mc_result['t_years']
     pof_mc = mc_result['PoF_t']*100
-    ax2.plot(t_mc, pof_mc, color=COLOR_NAVY, linewidth=1.5, label='PoF(t) from MC')
-    ax2.axhline(insp_result['regulatory_PoF_limit']*100, color=COLOR_RED,
+    ax2.plot(t_mc, pof_mc, color=COLOR_NAVY, linewidth=1.5, label='Colony damage fraction (one realisation)')
+    ax2.axhline(insp_result['assumed_PoF_limit']*100, color=COLOR_RED,
                 linewidth=1.0, linestyle='--',
-                label=f'Regulatory limit: {insp_result["regulatory_PoF_limit"]*100:.1f}%')
+                label=f'Assumed limit: {insp_result["assumed_PoF_limit"]*100:.1f}%')
     ax2.axvline(insp_result['T_pof_limit_yr'], color=COLOR_RED, linewidth=0.9,
                 linestyle=':', label=f'T_PoF_limit = {insp_result["T_pof_limit_yr"]:.1f} yr')
     ax2.axvline(T_opt, color=COLOR_NAVY, linewidth=1.2, linestyle='--',
                 label=f'T* = {T_opt:.1f} yr')
     ax2.set_xlabel('Time [yr]', fontsize=10)
-    ax2.set_ylabel('Colony PoF [%]', fontsize=10)
-    ax2.set_title("(k')  PoF Trajectory vs Inspection Decision Points",
+    ax2.set_ylabel('Colony damage fraction [%]', fontsize=10)
+    ax2.set_title("(k')  Colony Damage Fraction vs Inspection Decision Points",
                   fontsize=10, fontweight='bold', loc='left')
     ax2.legend(fontsize=8, frameon=False)
 
@@ -219,11 +219,13 @@ def plot_inspection_optimizer(insp_result, mc_result, out="assets/figures/panel_
     for bar, v in zip(bars3, T_opts):
         ax3.text(bar.get_x()+bar.get_width()/2, v+0.1,
                  f'{v:.1f} yr', ha='center', fontsize=9, color=COLOR_CHARCOAL)
-    ax3.axhline(5.0, color=COLOR_RED, linewidth=0.9, linestyle='--',
-                label='PHMSA 5-yr limit')
+    ax3.axhline(7.0, color=COLOR_RED, linewidth=0.9, linestyle='--',
+                label='7-yr reassessment cap')
     ax3.set_ylabel('Optimal inspection interval T* [yr]', fontsize=10)
+    binding = max(T_opts) - min(T_opts) < 0.05
     ax3.set_title("(k'')  T* vs Consequence of Failure Scenario\n"
-                  "Higher CoF → shorter optimal interval",
+                  + ("Assumed PoF limit sets T*, not CoF" if binding
+                     else "Higher CoF → shorter optimal interval"),
                   fontsize=10, fontweight='bold', loc='left')
     ax3.legend(fontsize=8.5, frameon=False)
 

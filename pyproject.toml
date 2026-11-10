@@ -19,7 +19,6 @@ keywords = [
     "fracture-mechanics",
     "API-571",
     "API-579",
-    "API-581",
     "BS-7910",
     "risk-based-inspection",
 ]
@@ -54,10 +53,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc"
-Repository = "https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc"
-Issues = "https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/issues"
-Changelog = "https://github.com/felipearocha/integrity-code-series-week-10_nnph_scc/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/felipearocha/integrity-code-series-week10-nnph-scc"
+Repository = "https://github.com/felipearocha/integrity-code-series-week10-nnph-scc"
+Issues = "https://github.com/felipearocha/integrity-code-series-week10-nnph-scc/issues"
+Changelog = "https://github.com/felipearocha/integrity-code-series-week10-nnph-scc/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -1,4 +1,7 @@
-"""API 579-1 Level 2 FAD + B31.12 vs B31.8 code comparison."""
+"""API 579-1 Level 2 FAD + B31.12 vs B31.8 code comparison.
+
+FAD curve as quoted from API 579-1/ASME FFS-1 in [SOURCE: Bourga et al. 2016, PVP2016-63876].
+"""
 import numpy as np
 from src.constants import (PIPE_OD, PIPE_WT, STEEL_SMYS, STEEL_UTS, KMAT,
                             P_OP_BAR, F_B31_8_CL2, F_B31_8_CL3, HDF_B31_12,
@@ -13,7 +16,7 @@ def fad_curve(Lr, Lr_max=None):
     if Lr_max is None: Lr_max = Lr_max_value()
     Lr = np.asarray(Lr, dtype=float); Kr = np.zeros_like(Lr)
     v = Lr <= Lr_max
-    Kr[v] = ((1+0.5*Lr[v]**2)**(-0.5) * (0.3+0.7*np.exp(-0.65*Lr[v]**6)))
+    Kr[v] = (1-0.14*Lr[v]**2) * (0.3+0.7*np.exp(-0.65*Lr[v]**6))
     return Kr
 
 def assessment_point(a_mm: float, P_bar: float = P_OP_BAR,

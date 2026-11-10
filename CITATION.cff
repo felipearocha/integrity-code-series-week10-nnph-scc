@@ -12,12 +12,13 @@ repository-code: "https://github.com/felipearocha/integrity-code-series-week10-n
 url: "https://github.com/felipearocha/integrity-code-series-week10-nnph-scc"
 abstract: >
   Full-physics simulation of Near-Neutral pH Stress Corrosion Cracking (NNpHSCC) in
-  gas transmission pipelines. Implements 15 coupled mechanisms in a single audit-chained
-  pipeline: Laplace soil electrochemistry with Butler-Volmer boundary conditions,
-  Oriani-Fick hydrogen diffusion with trap-corrected effective diffusivity, the
+  gas transmission pipelines. Implements 15 mechanisms in a single audit-chained
+  pipeline: potential-dependent cathodic hydrogen entry, an Oriani-Fick hydrogen
+  diffusion module with trap-corrected effective diffusivity (standalone, not called
+  by the crack-growth pipeline), the
   Chen-Sutherby-Xing combined-parameter crack-growth law with frequency saturation,
   Newman-Raju 3D semi-elliptical crack geometry, BS 7910:2019 Annex Q residual stress
-  and Cl. 7.3 coalescence, Turnbull (1993) crack-tip pH model, non-monotonic cathodic
+  and coalescence, Turnbull (1993) crack-tip pH model, non-monotonic cathodic
   protection potential, microstructure zones (base, HAZ, vintage X52 ERW), Zhao (2017)
   dormancy criterion, Latin Hypercube Monte Carlo with POD-corrected initial flaw
   depth, explicit Sun-Zhou-Kang (2021) model structural uncertainty (COV = 61.2%) as
@@ -37,7 +38,6 @@ keywords:
   - BS 7910
   - API 571
   - API 579
-  - API 581
   - risk-based inspection
   - Bayesian inference
   - particle filter
