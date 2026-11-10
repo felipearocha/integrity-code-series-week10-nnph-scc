@@ -30,8 +30,9 @@ def a_KIH_haz_mm():
                         1e-5, 0.95 * PIPE_WT)
 
 
-# Depth cap in crack_shape_evolution: growth stops at 98 % of the wall
-A_CAP_MM = PIPE_WT * 0.98 * 1000
+# Leak criterion of the limit state (failure_mode): growth stops at 80 % of the wall
+from src.constants import A_CRIT_FRAC
+A_LEAK_MM = PIPE_WT * A_CRIT_FRAC * 1000
 
 
 def _colony_span_m(colony_result):
@@ -54,24 +55,29 @@ def plot_crack_3d_evolution(res_base, res_haz, out="assets/figures/panel_ab_crac
     for ax in axes: _ax(ax)
     t=res_base['t_yr']; a=res_base['a']*1000; c=res_base['c']*1000
     t_h=res_haz['t_yr']; a_h=res_haz['a']*1000; c_h=res_haz['c']*1000
+    ft=res_haz['fracture_time_yr']
+    t_ev,a_ev=t_h,a_h
+    if np.isfinite(ft):   # add the failure event, which falls between output steps
+        k=int(np.searchsorted(t_h,ft))
+        t_ev=np.insert(t_h,k,ft); a_ev=np.insert(a_h,k,res_haz['a_fail']*1000)
     # Panel a: a(t) for base and HAZ
     ax=axes[0]
     ax.plot(t,a,color=COLOR_NAVY,linewidth=1.5,label='Base metal (bainitic X65)')
-    ax.plot(t_h,a_h,color=COLOR_RED,linewidth=1.5,linestyle='--',label='HAZ (ferrite-pearlite)')
+    ax.plot(t_ev,a_ev,color=COLOR_RED,linewidth=1.5,linestyle='--',label='HAZ (ferrite-pearlite)')
     ax.axhline(a_KIH_mm(),color=COLOR_TEAL,linewidth=0.8,linestyle=':',label=f'K$_{{IH}}$ base crossing {a_KIH_mm():.1f} mm')
     ax.axhline(a_KIH_haz_mm(),color=COLOR_RED,linewidth=0.7,linestyle=':',alpha=0.6,
                label=f'K$_{{IH}}$ HAZ crossing {a_KIH_haz_mm():.1f} mm (with residual stress)')
-    ax.axhline(A_CAP_MM,color=COLOR_CHARCOAL,linewidth=0.8,linestyle='-.',alpha=0.7,
-               label=f'Depth cap 0.98·t = {A_CAP_MM:.2f} mm (growth stops)')
-    ft=res_haz['fracture_time_yr']
+    ax.axhline(A_LEAK_MM,color=COLOR_CHARCOAL,linewidth=0.8,linestyle='-.',alpha=0.7,
+               label=f'Leak criterion 0.8·t = {A_LEAK_MM:.2f} mm (failure)')
     if np.isfinite(ft):
-        ax.annotate(f'HAZ reaches the cap; flaw critical\nat t = {ft:.2f} yr, curve frozen after',
-                    (ft, A_CAP_MM), xytext=(ft+1.5, A_CAP_MM*0.80), fontsize=8, color=COLOR_RED,
-                    arrowprops=dict(arrowstyle='->', color=COLOR_RED, lw=0.7))
-    ax.set_ylim(0, A_CAP_MM*1.08)
+        ax.annotate(f'HAZ fails by {res_haz["failure_mode"]} at t = {ft:.2f} yr,\n'
+                    f'a = {res_haz["a_fail"]*1000:.2f} mm; curve frozen after',
+                    (ft, res_haz['a_fail']*1000), xytext=(ft+1.5, A_LEAK_MM*0.25), fontsize=8,
+                    color=COLOR_RED, arrowprops=dict(arrowstyle='->', color=COLOR_RED, lw=0.7))
+    ax.set_ylim(0, A_LEAK_MM*1.15)
     ax.set_xlabel('Time [yr]',fontsize=10); ax.set_ylabel('Crack depth a [mm]',fontsize=10)
     ax.set_title('(a)  3D Crack Depth a(t)\nBase vs HAZ zone [SOURCE: Beavers et al. 2001]',fontsize=10,fontweight='bold',loc='left')
-    ax.legend(fontsize=8,frameon=False,loc='center right')
+    ax.legend(fontsize=8,frameon=False,loc='center right',bbox_to_anchor=(1.0,0.62))  # clear of the threshold lines
     # Panel b: aspect ratio c/a
     ax=axes[1]
     ax.plot(t, c/a,color=COLOR_NAVY,linewidth=1.5,label='Base (a/c coupled ODEs)')
@@ -193,9 +199,9 @@ def plot_mc_full(mc_result, out="assets/figures/panel_e_mc_full.png"):
     ax.set_ylabel('CDF [—]',fontsize=10)
     ax.set_title('(e)  Crack Depth CDF — N = 10,000\nPost-ILI POD-corrected a$_0$ + model error ε',fontsize=10,fontweight='bold',loc='left')
     ax.axvline(limit,color=COLOR_RED,linewidth=0.9,linestyle=':',label=f'K$_{{IH}}$ crossing {limit:.1f} mm')
-    n_cap=int(np.sum(wl>=A_CAP_MM-1e-6))
-    ax.axvline(A_CAP_MM,color=COLOR_CHARCOAL,linewidth=0.8,linestyle='-.',alpha=0.7,
-               label=f'Depth cap 0.98·t = {A_CAP_MM:.2f} mm ({n_cap/len(wl):.1%} of samples)')
+    n_leak=int(np.sum(wl>=A_LEAK_MM-1e-6))
+    ax.axvline(A_LEAK_MM,color=COLOR_CHARCOAL,linewidth=0.8,linestyle='-.',alpha=0.7,
+               label=f'Leak criterion 0.8·t = {A_LEAK_MM:.2f} mm ({n_leak/len(wl):.1%} of samples failed there)')
     ax.set_ylim(0,1.05); ax.legend(fontsize=8,frameon=False,loc='upper left')
     # Tornado
     ax=axes[1]
@@ -352,8 +358,8 @@ def plot_colony_and_coalescence(colony_result, out="assets/figures/panel_g_colon
     frac=[r['a'][-1]*1000 for r in colony_result['results']]
     sc3=ax3.scatter(a0,frac,c=eps,cmap=ICS2_SEQ,s=20,alpha=0.8,vmin=0.3,vmax=3.0)
     fig.colorbar(sc3,ax=ax3,fraction=0.046,pad=0.04).set_label('ε_model [—]',fontsize=9)
-    ax3.axhline(A_CAP_MM,color=COLOR_CHARCOAL,linewidth=0.8,linestyle='-.',alpha=0.7,
-                label=f'Depth cap 0.98·t = {A_CAP_MM:.2f} mm')
+    ax3.axhline(A_LEAK_MM,color=COLOR_CHARCOAL,linewidth=0.8,linestyle='-.',alpha=0.7,
+                label=f'Leak criterion 0.8·t = {A_LEAK_MM:.2f} mm')
     ax3.legend(fontsize=8,frameon=False,loc='center right')
     ax3.set_xlabel('Initial a₀ [mm]',fontsize=10); ax3.set_ylabel('Final a(t=20yr) [mm]',fontsize=10)
     ax3.set_title("(g'')  Model Error Spread per Crack\nEpistemic uncertainty visible in scatter",fontsize=10,fontweight='bold',loc='left')
@@ -483,7 +489,7 @@ def animate_crack_colony(colony_result, out="assets/animations/nnph_scc_crack_co
     ax_top.set_xlim(0, _colony_span_m(colony_result))  # one cluster, not PIPE_L
     ax_top.set_ylim(0, max(PIPE_WT*1000*0.6, a_max*1.05))
     ax_top.axhline(a_KIH_mm(), color=COLOR_RED, linewidth=0.8, linestyle=':')
-    ax_top.axhline(A_CAP_MM, color=COLOR_CHARCOAL, linewidth=0.8, linestyle='-.', alpha=0.7)
+    ax_top.axhline(A_LEAK_MM, color=COLOR_CHARCOAL, linewidth=0.8, linestyle='-.', alpha=0.7)
     ax_top.set_xlabel('Axial position [m]')
     ax_top.set_ylabel('Crack depth a [mm]')
     ax_top.set_title('NNpHSCC Crack Colony — Spatial Growth',
@@ -497,7 +503,7 @@ def animate_crack_colony(colony_result, out="assets/animations/nnph_scc_crack_co
                             plt.Line2D([0],[0],color=COLOR_RED,linestyle=':',
                                        label=f'K$_{{IH}}$ base crossing {a_KIH_mm():.1f} mm'),
                             plt.Line2D([0],[0],color=COLOR_CHARCOAL,linestyle='-.',
-                                       label=f'Depth cap 0.98·t = {A_CAP_MM:.2f} mm')],
+                                       label=f'Leak criterion 0.8·t = {A_LEAK_MM:.2f} mm')],
                    fontsize=8, frameon=False, loc='center right')
 
     ax_bot.set_xlim(0, t_fine[-1])

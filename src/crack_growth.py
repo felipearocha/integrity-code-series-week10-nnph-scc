@@ -7,7 +7,7 @@ Implements:
 3. Variable amplitude loading with underload interaction [SOURCE: Chen 2007]
 4. Frequency saturation at f_crit = 10^-3 Hz [SOURCE: Xing model via Sun, Zhou & Kang 2021]
 5. Crack dormancy criterion Stage I → Stage II [SOURCE: Zhao et al. 2017]
-6. 3D semi-elliptical crack shape (a, c coupled EDOs) [SOURCE: Newman-Raju 1981]
+6. 3D semi-elliptical crack shape (a, c coupled ODEs) [SOURCE: Newman-Raju 1981]
 7. Residual stress K_I contribution [SOURCE: BS 7910 Annex Q]
 8. Microstructure-dependent properties [SOURCE: Beavers et al. 2001]
 9. Model structural uncertainty term [SOURCE: Sun, Zhou & Kang 2021 COV=61.2%]
@@ -20,11 +20,17 @@ from src.constants import (
     SIGMA_RES_M_FRAC, SIGMA_RES_B_FRAC,
 )
 from src.pressure_spectrum import (
-    da_dN_Chen_Xing, da_dt_variable_amplitude, PressureSpectrum
+    da_dN_Chen_Xing, da_dt_variable_amplitude, PressureSpectrum, F_INT_UNDERLOAD
 )
 from src.microstructure import get_zone_properties
 
 SEC_PER_YR = 365.25 * 24 * 3600
+
+# Numerical, not physical: the largest change in a or c per sub-step (0.2% of
+# the wall, 25 um). Growth accelerates sharply near the limit state, so a fixed
+# step of months jumps past it; with Heun sub-steps of this size the HAZ
+# baseline failure time is the same to 4 digits for 20 to 4000 output steps.
+DA_SUBSTEP_M = 0.002 * PIPE_WT
 
 
 # ── SIF functions ─────────────────────────────────────────────────────────
@@ -162,12 +168,14 @@ def folias_factor(c_m: float, D: float = PIPE_OD, t: float = PIPE_WT) -> float:
     return float(0.032 * lam + 3.3)
 
 
-def flaw_is_critical(a_m: float, c_m: float,
-                      P_bar: float = P_OP_BAR,
-                      D: float = PIPE_OD, t: float = PIPE_WT,
-                      in_HAZ: bool = False) -> bool:
+def failure_mode(a_m: float, c_m: float,
+                  P_bar: float = P_OP_BAR,
+                  D: float = PIPE_OD, t: float = PIPE_WT,
+                  in_HAZ: bool = False):
     """
-    Limit-state check for an axial semi-elliptical surface flaw. Critical if ANY:
+    Limit-state check for an axial semi-elliptical surface flaw. Returns
+    'leak', 'brittle' or 'collapse' for the first criterion met, else None.
+    Critical if ANY:
       (1) depth reaches A_CRIT_FRAC of the wall — leak / ligament exhaustion;
       (2) net-section plastic collapse via the Folias factor — a long *coalesced*
           flaw ruptures at a shallower depth than a short one;
@@ -177,15 +185,23 @@ def flaw_is_critical(a_m: float, c_m: float,
     [SOURCE: ASME B31G surface-flaw flow-stress criterion; API 579-1 Level 2.]
     """
     if a_m >= A_CRIT_FRAC * t:
-        return True
+        return 'leak'
     if K_I_total(a_m, c_m, P_bar, in_HAZ=in_HAZ) >= K_IC_AIR:
-        return True
+        return 'brittle'
     M_T = folias_factor(c_m, D, t)
     sigma_flow = 0.5 * (STEEL_SMYS + STEEL_UTS) * 1e-6      # flow stress [MPa]
     sigma_h = (P_bar * 0.1) * D / (2.0 * t)                 # hoop stress [MPa]
     a_t = min(a_m / t, 0.999)
     sigma_fail = sigma_flow * (1.0 - a_t) / (1.0 - a_t / M_T)
-    return sigma_h >= sigma_fail
+    return 'collapse' if sigma_h >= sigma_fail else None
+
+
+def flaw_is_critical(a_m: float, c_m: float,
+                      P_bar: float = P_OP_BAR,
+                      D: float = PIPE_OD, t: float = PIPE_WT,
+                      in_HAZ: bool = False) -> bool:
+    """True if the flaw meets any limit state in failure_mode."""
+    return failure_mode(a_m, c_m, P_bar, D, t, in_HAZ) is not None
 
 
 # ── Crack dormancy model ──────────────────────────────────────────────────
@@ -225,6 +241,73 @@ def crack_is_dormant(a_m: float, c_m: float, C_H_tip: float,
 
 # ── 3D crack shape evolution ──────────────────────────────────────────────
 
+def advance_crack(a0_m: float, c0_m: float,
+                  spectrum: PressureSpectrum,
+                  C_H_bulk: float,
+                  microstructure_factor: float = 1.0,
+                  model_error: float = 1.0,
+                  dormancy_factor: float = 1.0,
+                  in_haz: bool = False,
+                  dt_s: float = 30*86400,
+                  interaction_factor: float = F_INT_UNDERLOAD,
+                  P_bar: float = P_OP_BAR) -> tuple:
+    """
+    Advance (a, c) over dt_s with the coupled ODEs
+
+        da/dt = dormancy_factor * da_dt_VA(deepest point)
+        dc/dt = dormancy_factor * da_dt_VA(surface point)
+
+    using Heun (RK2) sub-steps that change a or c by at most DA_SUBSTEP_M, with
+    the rates re-evaluated at the current (a, c). If the flaw reaches the
+    limit state (failure_mode) inside the step, integration stops there: the
+    crossing is located by bisection on the last sub-step, so the returned
+    depth and time are those of the event, not of the next output step.
+    dormancy_factor is held for the whole step (set by the caller).
+
+    Returns (a [m], c [m], t_event_s): t_event_s is the time after the start
+    of the step at which the flaw became critical, or None.
+    """
+    def rates(a, c):
+        da = da_dt_variable_amplitude(
+            a, spectrum, C_H_bulk,
+            K_I_func=lambda am, P: K_I_deeppoint(am, c, P)
+                      + (K_I_residual(am) if in_haz else 0.0),
+            delta_K_func=lambda am, P, R: delta_K(am, c, P, R),
+            microstructure_factor=microstructure_factor, model_error=model_error,
+            interaction_factor=interaction_factor, spectrum_type=spectrum.type)
+        dc = da_dt_variable_amplitude(
+            a, spectrum, C_H_bulk,
+            K_I_func=lambda am, P: K_I_surfacepoint(am, c, P),
+            delta_K_func=lambda am, P, R: delta_K_surface(am, c, P, R),
+            microstructure_factor=microstructure_factor, model_error=model_error,
+            interaction_factor=interaction_factor, spectrum_type=spectrum.type)
+        return dormancy_factor * da, dormancy_factor * dc
+
+    def critical(a, c):
+        return flaw_is_critical(a, c, P_bar, in_HAZ=in_haz)
+
+    a, c, t = float(a0_m), float(c0_m), 0.0
+    if critical(a, c):
+        return a, c, 0.0
+    while dt_s - t > 1e-9 * dt_s:
+        da1, dc1 = rates(a, c)
+        h = min(dt_s - t, DA_SUBSTEP_M / max(da1, dc1, 1e-300))
+        da2, dc2 = rates(a + da1 * h, c + dc1 * h)          # Heun (RK2)
+        da, dc = 0.5 * (da1 + da2), 0.5 * (dc1 + dc2)
+        if not critical(a + da * h, c + dc * h):
+            a, c, t = a + da * h, c + dc * h, t + h
+            continue
+        lo, hi = 0.0, 1.0                     # fraction of this sub-step
+        for _ in range(50):
+            mid = 0.5 * (lo + hi)
+            if critical(a + da * h * mid, c + dc * h * mid):
+                hi = mid
+            else:
+                lo = mid
+        return a + da * h * hi, c + dc * h * hi, t + h * hi
+    return a, c, None
+
+
 def crack_shape_evolution(a0_m: float, c0_m: float,
                            spectrum: PressureSpectrum,
                            C_H_bulk: float,
@@ -235,36 +318,18 @@ def crack_shape_evolution(a0_m: float, c0_m: float,
                            in_haz: bool = False,
                            dt_s: float = 30*86400) -> tuple:
     """
-    Advance (a, c) by dt_s seconds using coupled EDOs, with the SAME
-    variable-amplitude rate law that integrate_full reports as v(t).
-
-    da/dt = dormancy_factor * da_dt_VA(deepest point)
-    dc/dt = dormancy_factor * da_dt_VA(surface point)
-
-    dormancy_factor < 1 applies the Stage-I slow-dissolution penalty for a
-    dormant crack (so the reported velocity and the advance use one rate law).
+    (a, c) after dt_s from advance_crack, stopping at the limit state.
     K_I_func / delta_K_func are accepted for backward compatibility but the
     deep- and surface-point SIFs are built internally so (a, c) stay consistent.
 
     Returns: (a_new [m], c_new [m])
     """
-    da_dt_A = da_dt_variable_amplitude(
-        a0_m, spectrum, C_H_bulk,
-        K_I_func=lambda am, P: K_I_deeppoint(am, c0_m, P)
-                  + (K_I_residual(am) if in_haz else 0.0),
-        delta_K_func=lambda am, P, R: delta_K(am, c0_m, P, R),
-        microstructure_factor=microstructure_factor, model_error=model_error,
-        spectrum_type=spectrum.type)
-    dc_dt_C = da_dt_variable_amplitude(
-        a0_m, spectrum, C_H_bulk,
-        K_I_func=lambda am, P: K_I_surfacepoint(am, c0_m, P),
-        delta_K_func=lambda am, P, R: delta_K_surface(am, c0_m, P, R),
-        microstructure_factor=microstructure_factor, model_error=model_error,
-        spectrum_type=spectrum.type)
-
-    a_new = min(a0_m + dormancy_factor * da_dt_A * dt_s, PIPE_WT * 0.98)
-    c_new = c0_m + dormancy_factor * dc_dt_C * dt_s
-    return float(max(a_new, a0_m)), float(max(c_new, c0_m))
+    a, c, _ = advance_crack(a0_m, c0_m, spectrum, C_H_bulk,
+                            microstructure_factor=microstructure_factor,
+                            model_error=model_error,
+                            dormancy_factor=dormancy_factor,
+                            in_haz=in_haz, dt_s=dt_s)
+    return a, c
 
 
 # ── Full crack growth integrator ──────────────────────────────────────────
@@ -297,28 +362,26 @@ def integrate_full(a0_m: float, c0_m: float,
     a, c = float(a0_m), float(c0_m)
     fracture_time_yr = np.inf
     fractured = False
+    mode = None
+    in_haz = (zone == 'haz')
 
     for k in range(n_steps + 1):
         t_s = k * dt_s
         t_arr[k] = t_s / SEC_PER_YR
         a_arr[k], c_arr[k] = a, c
         C_H_tip = C_H_tip_func(t_s)
-        KI_arr[k] = K_I_total(a, c, P_bar, in_HAZ=(zone == 'haz'))
+        KI_arr[k] = K_I_total(a, c, P_bar, in_HAZ=in_haz)
         ac_arr[k]  = a / max(c, 1e-6)
         dormant_arr[k] = crack_is_dormant(a, c, C_H_tip, P_bar, K_IH, zone)
 
         # Failure limit state: leak (80% wall), net-section collapse (Folias, so
         # a long coalesced flaw fails shallower), or brittle K_IC. K_IH is the
-        # *onset* threshold for environmental cracking — NOT a rupture criterion —
-        # so it must not freeze growth here (using it inverted the regime and
-        # froze active flaws, e.g. the HAZ baseline, at t=0).
-        if flaw_is_critical(a, c, P_bar, in_HAZ=(zone == 'haz')):
-            if not fractured:
-                fracture_time_yr = t_s / SEC_PER_YR
-                fractured = True
+        # *onset* threshold for environmental cracking — NOT a rupture criterion.
+        # advance_crack stops at the crossing, so the failure time and depth are
+        # those of the event, not of the next output step.
+        if fractured:
             v_arr[k] = 0.0
         else:
-            in_haz = (zone == 'haz')
             v_arr[k] = da_dt_variable_amplitude(
                 a, spectrum, C_H_bulk,
                 # Residual stress raises the mean SIF (K_max), so in the HAZ it
@@ -336,17 +399,24 @@ def integrate_full(a0_m: float, c0_m: float,
             # Stage-I dormant cracks advance at 10% of the Stage-II rate [ASSUMED];
             # the same VA rate law (v_arr above) advances the geometry.
             dormancy_factor = 0.10 if dormant_arr[k] else 1.0
-            a, c = crack_shape_evolution(a, c, spectrum, C_H_bulk,
+            a, c, t_event = advance_crack(a, c, spectrum, C_H_bulk,
                                           microstructure_factor=f_micro,
                                           model_error=model_error,
                                           dormancy_factor=dormancy_factor,
-                                          in_haz=(zone == 'haz'),
-                                          dt_s=dt_s)
+                                          in_haz=in_haz, dt_s=dt_s, P_bar=P_bar)
+            if t_event is not None:
+                fractured = True
+                fracture_time_yr = (t_s + t_event) / SEC_PER_YR
+                mode = failure_mode(a, c, P_bar, in_HAZ=in_haz)
+                if t_event == 0.0:          # critical at the start of the step
+                    v_arr[k] = 0.0
 
     return {
         't_yr': t_arr, 'a': a_arr, 'c': c_arr, 'KI': KI_arr,
         'ac_ratio': ac_arr, 'dormant': dormant_arr, 'v': v_arr,
         'fracture_time_yr': fracture_time_yr,
+        'failure_mode': mode,
+        'a_fail': a if fractured else np.nan,
         'a0': a0_m, 'c0': c0_m, 'zone': zone,
         'pipe_wt': PIPE_WT, 'K_IH': K_IH,
     }
